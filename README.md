@@ -36,4 +36,7 @@
 
 `ssh -T git@github.com`
 
+* git Clone
+
+`git clone git@github.com:addinedu-advance-3rd/aris-repo-1.git`
 
