@@ -36,6 +36,8 @@
 
 `ssh -T git@github.com`
 
+### Repository 클론 및 리모트 설정
+
 * git Clone
 
 `git clone git@github.com:addinedu-advance-3rd/aris-repo-1.git`
