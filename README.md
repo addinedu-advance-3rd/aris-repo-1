@@ -40,3 +40,8 @@
 
 `git clone git@github.com:addinedu-advance-3rd/aris-repo-1.git`
 
+* 리모트 설정
+
+`git remote set-url origin git@github.com:addinedu-advance-3rd/aris-repo-1.git`
+
+
