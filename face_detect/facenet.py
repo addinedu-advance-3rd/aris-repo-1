@@ -1,5 +1,6 @@
 import cv2
 from facenet_pytorch import MTCNN, InceptionResnetV1
+from deepface import DeepFace
 import torch
 from torchvision import transforms
 import numpy as np
