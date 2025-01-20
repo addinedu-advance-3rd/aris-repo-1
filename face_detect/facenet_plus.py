@@ -48,9 +48,27 @@ def extract_embedding_and_boxes(image):
 
 def save_new_face(image, folder_path):
     """새로운 얼굴 이미지를 저장"""
-    file_name = input("이름을 입력하세요: ") + ".jpg"  # 사용자로부터 이름 입력
-    cv2.imwrite(os.path.join(folder_path, file_name), cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-    print(f"새로운 얼굴이 저장되었습니다: {file_name}")
+    file_name = "random_face.jpg"  # 기본 랜덤 이름
+    input_received = threading.Event()
+
+    def get_user_input():
+        nonlocal file_name
+        name = input("이름을 입력하세요: ")
+        if name.strip():
+            file_name = name + ".jpg"
+        input_received.set()
+
+    print("10초 안에 이름을 입력하세요...")
+    input_thread = threading.Thread(target=get_user_input)
+    input_thread.start()
+
+    input_thread.join(timeout=10)  # 10초 대기
+    if not input_received.is_set():
+        print("시간 초과! 랜덤 닉네임으로 저장합니다.")
+
+    file_path = os.path.join(folder_path, file_name)
+    cv2.imwrite(file_path, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+    print(f"새로운 얼굴이 저장되었습니다: {file_path}")
 
 # 폴더 내 모든 이미지 로드 및 임베딩 추출
 def load_embeddings_from_folder(folder_path):
