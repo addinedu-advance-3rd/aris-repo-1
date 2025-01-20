@@ -5,6 +5,8 @@ from torchvision import transforms
 import numpy as np
 import os
 import time
+import threading
+
 
 # CUDA 사용 여부 확인
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -87,6 +89,7 @@ def load_embeddings_from_folder(folder_path):
 
 # 기준 이미지 폴더 설정
 img_src_folder = 'img_src'
+img_src_test_folder = 'img_src_test'
 reference_embeddings = load_embeddings_from_folder(img_src_folder)
 if not reference_embeddings:
     print("No valid face embeddings found in the folder.")
@@ -145,15 +148,31 @@ while cap.isOpened():
                 break
         else:
             matched = False  # 매칭이 실패한 경우 상태 초기화
-            if no_match_start_time is None:  # 비매칭 시작 시간 기록
+
+            # NO MATCH 상태를 처음 기록
+            if no_match_start_time is None:
                 no_match_start_time = time.time()
 
             # 매칭되지 않고 2초 이상 경과한 경우
-            if no_match_start_time and time.time() - no_match_start_time > 2:
-                print("새로운 얼굴이 감지되었습니다. 이미지를 저장합니다.")
-                save_new_face(frame_rgb, img_src_folder)
-                reference_embeddings = load_embeddings_from_folder(img_src_folder)  # 새로 로드
-                no_match_start_time = None  # 비매칭 시간 초기화
+            if time.time() - no_match_start_time > 2:
+                print("새로운 얼굴이 감지되었습니다. 이미지를 저장하려고 시도합니다.")
+
+                # 얼굴 재확인
+                embedding, boxes = extract_embedding_and_boxes(frame_rgb)
+                if embedding is not None and boxes is not None and len(boxes) > 0:
+                    print("얼굴이 확인되었습니다. 이미지를 저장합니다.")
+                    save_new_face(frame_rgb, img_src_test_folder)
+                    reference_embeddings = load_embeddings_from_folder(img_src_folder)  # 새로 로드
+                else:
+                    print("얼굴이 사라졌습니다. 저장하지 않습니다.")
+                
+                # NO MATCH 상태 초기화
+                no_match_start_time = None
+            elif embedding is not None and boxes is not None and len(boxes) > 0:
+                # 얼굴이 다시 확인되면 NO MATCH 상태 초기화
+                print("얼굴이 다시 확인되었습니다. NO MATCH 상태 초기화.")
+                no_match_start_time = None
+
 
             # 매칭되지 않은 경우 바운딩 박스 표시
             if boxes is not None and len(boxes) > 0:
