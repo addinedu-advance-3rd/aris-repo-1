@@ -7,6 +7,11 @@ import os
 import time
 import threading
 
+img_src_folder = 'img_src'
+img_src_test_folder = 'img_src_test'
+
+# 대상 폴더 확인
+image_folder = img_src_test_folder
 
 # CUDA 사용 여부 확인
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -88,8 +93,6 @@ def load_embeddings_from_folder(folder_path):
     return embeddings
 
 # 기준 이미지 폴더 설정
-img_src_folder = 'img_src'
-img_src_test_folder = 'img_src_test'
 reference_embeddings = load_embeddings_from_folder(img_src_folder)
 if not reference_embeddings:
     print("No valid face embeddings found in the folder.")
@@ -161,7 +164,7 @@ while cap.isOpened():
                 embedding, boxes = extract_embedding_and_boxes(frame_rgb)
                 if embedding is not None and boxes is not None and len(boxes) > 0:
                     print("얼굴이 확인되었습니다. 이미지를 저장합니다.")
-                    save_new_face(frame_rgb, img_src_test_folder)
+                    save_new_face(frame_rgb, img_src_folder)
                     reference_embeddings = load_embeddings_from_folder(img_src_folder)  # 새로 로드
                 else:
                     print("얼굴이 사라졌습니다. 저장하지 않습니다.")
