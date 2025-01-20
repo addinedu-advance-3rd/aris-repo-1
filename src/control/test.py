@@ -101,6 +101,7 @@ class A_Circle_Arm():
         """
     def move_a_point(self, num):
         ret = self.arm.set_position(*self.poses[num], speed=self.speed, mvacc=self.mvacc, wait=True)
+
     def _move_one_path(self, act):
         """
         act : self.route key 중에 하나일것
@@ -109,6 +110,17 @@ class A_Circle_Arm():
         for r_n in route:
             pose = self.poses[r_n]
             self.arm.set_position(*pose, speed=self.speed, mvacc=self.mvacc, wait=True)
+
+    def _grap(self, gripper=True):
+        if gripper:
+            self.arm.close_lite6_gripper()
+            time.sleep(1)
+            self.arm.stop_lite6_gripper()
+        else:
+            self.arm.open_lite6_gripper()
+            time.sleep(1)
+            self.arm.stop_lite6_gripper()
+            
     def run(self):
         self._move_one_path("default_to_ice_1")
         self._move_one_path("ice_1_to_in_press")
@@ -119,15 +131,8 @@ class A_Circle_Arm():
         self._move_one_path("toping_3_to_under_press")
         self._move_one_path("under_press_to_person")
         self._move_one_path("person_to_default")
+
 if __name__ == "__main__":
     my_arm = A_Circle_Arm("192.168.1.182")
     # my_arm.move_a_point(8)
     my_arm.run()
-    
-    # my_arm.arm.close_lite6_gripper()
-    # time.sleep(1)
-    # my_arm.arm.stop_lite6_gripper()
-    # time.sleep(3)
-    # my_arm.arm.open_lite6_gripper()
-    # time.sleep(1)
-    # my_arm.arm.stop_lite6_gripper()
