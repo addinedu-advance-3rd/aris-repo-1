@@ -93,10 +93,10 @@ def load_embeddings_from_folder(folder_path):
     return embeddings
 
 # 기준 이미지 폴더 설정
-reference_embeddings = load_embeddings_from_folder(img_src_folder)
+reference_embeddings = load_embeddings_from_folder(image_folder)
 if not reference_embeddings:
     print("No valid face embeddings found in the folder.")
-    exit()
+    
 else:
     print(f"Loaded {len(reference_embeddings)} reference embeddings.")
 
@@ -107,9 +107,13 @@ if not cap.isOpened():
     exit()
 
 print("Press 'q' to quit.")
+
 match_start_time = None  # 매칭된 시간을 저장
 no_match_start_time = None  # 매칭되지 않은 시간을 기록
 matched = False  # 매칭 상태를 저장
+detection_staus = False
+current_user = None
+
 
 while cap.isOpened():
     ret, frame = cap.read()
@@ -121,7 +125,8 @@ while cap.isOpened():
     # 실시간 얼굴 임베딩 추출
     embedding, boxes = extract_embedding_and_boxes(frame_rgb)
 
-    if embedding is not None:
+    if embedding is not None: #얼굴이 있긴할때
+        detection_staus = True
         best_match = "No Match"
         min_distance = float('inf')
 
@@ -133,8 +138,9 @@ while cap.isOpened():
                 best_match = file_name if min_distance < 0.7 else "No Match"
 
         if best_match != "No Match":
-            if not matched:  # 처음 매칭된 경우만 시간 기록
+            if not matched:
                 print(f"{best_match}님 환영합니다. 3초 뒤 종료됩니다.")
+                current_user = best_match
                 match_start_time = time.time()
                 matched = True
                 no_match_start_time = None  # 매칭되면 비매칭 시간 초기화
@@ -145,11 +151,20 @@ while cap.isOpened():
                     x1, y1, x2, y2 = [int(b) for b in box]
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     cv2.putText(frame, best_match, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-
-            # 3초 후 종료
-            if matched and time.time() - match_start_time > 3:
-                break
-        else:
+                
+            if current_user == best_match:
+                # 3초 후 종료
+                if matched and time.time() - match_start_time > 3:
+                    print(f"{best_match}님 환영합니다. 이제 종료합니다.")
+                    break
+            else:
+                # 현재 사용자와 매칭된 사용자가 달라지면 초기화
+                print(f"사용자가 변경되었습니다: 이전 사용자: {current_user}, 새 사용자: {best_match}")
+                current_user = None
+                match_start_time = None
+                matched = False        
+                    
+        else: # best_match = "No Match"
             matched = False  # 매칭이 실패한 경우 상태 초기화
 
             # NO MATCH 상태를 처음 기록
@@ -157,24 +172,25 @@ while cap.isOpened():
                 no_match_start_time = time.time()
 
             # 매칭되지 않고 2초 이상 경과한 경우
-            if time.time() - no_match_start_time > 2:
+            if no_match_start_time and time.time() - no_match_start_time > 2:
                 print("새로운 얼굴이 감지되었습니다. 이미지를 저장하려고 시도합니다.")
 
                 # 얼굴 재확인
                 embedding, boxes = extract_embedding_and_boxes(frame_rgb)
                 if embedding is not None and boxes is not None and len(boxes) > 0:
                     print("얼굴이 확인되었습니다. 이미지를 저장합니다.")
-                    save_new_face(frame_rgb, img_src_folder)
-                    reference_embeddings = load_embeddings_from_folder(img_src_folder)  # 새로 로드
+                    save_new_face(frame_rgb, image_folder)
+                    reference_embeddings = load_embeddings_from_folder(image_folder)  # 새로 로드
                 else:
-                    print("얼굴이 사라졌습니다. 저장하지 않습니다.")
+                    print("얼굴이 사라졌습니다. NO MATCH ")
+                    no_match_start_time = None
                 
                 # NO MATCH 상태 초기화
                 no_match_start_time = None
             elif embedding is not None and boxes is not None and len(boxes) > 0:
                 # 얼굴이 다시 확인되면 NO MATCH 상태 초기화
-                print("얼굴이 다시 확인되었습니다. NO MATCH 상태 초기화.")
-                no_match_start_time = None
+                print("얼굴이 다시 확인되었습니다.")
+                
 
 
             # 매칭되지 않은 경우 바운딩 박스 표시
@@ -185,6 +201,8 @@ while cap.isOpened():
                     cv2.putText(frame, "No Match", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
     else:
         print("No face detected.")
+        no_match_start_time = None
+        match_start_time = None
 
     # 화면 출력
     cv2.imshow("Webcam Face Detection", frame)
