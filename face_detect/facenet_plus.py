@@ -174,7 +174,7 @@ while cap.isOpened():
             if not matched:  # 처음 매칭된 경우만 시간 기록
                 age = metadata.get(best_match, {}).get("age", "Unknown")
                 gender = metadata.get(best_match, {}).get("gender", "Unknown")
-                print(f"{best_match}님 환영합니다. 3초 뒤 종료됩니다.")
+                print(f"{best_match}님 환영합니다. 1.5초 뒤 종료됩니다.")
                 match_start_time = time.time()
                 matched = True
                 no_match_start_time = None  # 매칭되면 비매칭 시간 초기화
@@ -187,8 +187,8 @@ while cap.isOpened():
                     cv2.putText(frame, f"{best_match}", 
                                 (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
-            # 3초 후 종료
-            if matched and time.time() - match_start_time > 3:
+            # 3초 후 종료 -> 1.5초로 변경
+            if matched and time.time() - match_start_time > 1.5:
                 break
         else:
             matched = False  # 매칭이 실패한 경우 상태 초기화
