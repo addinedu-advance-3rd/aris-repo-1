@@ -6,6 +6,7 @@ import numpy as np
 import os
 import json
 import time
+from deepface import DeepFace  # DeepFace 추가
 
 # CUDA 사용 여부 확인
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -25,14 +26,14 @@ def calculate_distance(embedding1, embedding2):
 # 얼굴 임베딩 및 바운딩 박스 추출 함수
 def extract_embedding_and_boxes(image):
     boxes, _ = mtcnn.detect(image)
-    if boxes is not None and len(boxes) > 0:  # 얼굴이 하나 이상 검출된 경우
+    if boxes is not None and len(boxes) > 0:  # 얼굴이 검출된 경우
         x1, y1, x2, y2 = [int(b) for b in boxes[0]]
         x1, y1 = max(x1, 0), max(y1, 0)
         x2, y2 = min(x2, image.shape[1]), min(y2, image.shape[0])
         face = image[y1:y2, x1:x2]
         if face.size == 0:
             print("Empty face region detected.")
-            return None, None
+            return None, None, None
         transform = transforms.Compose([
             transforms.ToPILImage(),
             transforms.Resize((160, 160)),
@@ -41,13 +42,13 @@ def extract_embedding_and_boxes(image):
         ])
         face_tensor = transform(face).unsqueeze(0).to(device)
         embedding = facenet(face_tensor).detach().cpu().numpy().flatten()
-        return embedding, [boxes[0]]  # 첫 번째 바운딩 박스만 반환
+        return embedding, [boxes[0]], face  # 얼굴 이미지 추가 반환
     else:
         print("No face detected.")
-        return None, None
+        return None, None, None
 
 # 새로운 얼굴의 임베딩 및 메타데이터 저장
-def save_new_face_and_embedding(embedding, folder_path, metadata):
+def save_new_face_and_embedding(embedding, folder_path, metadata, face_image):
     file_name = input("이름을 입력하세요: ")  # 사용자로부터 이름 입력
 
     # JSON 파일 경로
@@ -67,14 +68,36 @@ def save_new_face_and_embedding(embedding, folder_path, metadata):
         print(f"{file_name}는 이미 등록된 사용자입니다.")
         return
 
+    # DeepFace 분석
+    try:
+        analysis = DeepFace.analyze(face_image, actions=['age', 'gender'], enforce_detection=False)
+        if isinstance(analysis, list):  # 분석 결과가 리스트일 경우 처리
+            analysis = analysis[0]
+        age = analysis.get('age', 'Unknown')
+
+        # 성별 확률 분석
+        if isinstance(analysis.get('gender'), dict):  # 성별이 확률로 반환된 경우
+            gender_prob = analysis['gender']
+            gender = max(gender_prob, key=gender_prob.get)  # 확률이 높은 성별 선택
+        else:
+            gender = analysis.get('gender', 'Unknown')  # 일반적인 문자열 반환
+    except Exception as e:
+        print(f"DeepFace 분석 중 오류 발생: {e}")
+        age = 'Unknown'
+        gender = 'Unknown'
+
     # 새로운 데이터 추가
-    metadata[file_name] = {"embedding": embedding.tolist()}
+    metadata[file_name] = {
+        "embedding": embedding.tolist(),
+        "age": age,
+        "gender": gender
+    }
 
     # JSON 파일에 저장
     with open(metadata_path, "w", encoding="utf-8") as file:
         json.dump(metadata, file, indent=4, ensure_ascii=False)
 
-    print(f"{file_name}님의 임베딩 정보가 저장되었습니다.")
+    print(f"{file_name}님의 임베딩 정보와 분석 결과가 저장되었습니다.")
 
 # 폴더 내 모든 이미지 로드 및 임베딩 추출
 def load_embeddings_from_folder(folder_path):
@@ -138,8 +161,8 @@ while cap.isOpened():
 
     # BGR -> RGB 변환
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    # 실시간 얼굴 임베딩 추출
-    embedding, boxes = extract_embedding_and_boxes(frame_rgb)
+    # 실시간 얼굴 임베딩 추출 및 얼굴 이미지 반환
+    embedding, boxes, face_image = extract_embedding_and_boxes(frame_rgb)
 
     if embedding is not None:
         best_match = "No Match"
@@ -177,7 +200,7 @@ while cap.isOpened():
 
             if no_match_start_time and time.time() - no_match_start_time > 2:
                 print("새로운 얼굴이 감지되었습니다. 임베딩 정보를 저장합니다.")
-                save_new_face_and_embedding(embedding, img_src_folder, reference_embeddings)
+                save_new_face_and_embedding(embedding, img_src_folder, reference_embeddings, face_image)
                 reference_embeddings = load_embeddings_from_folder(img_src_folder)  # 새로 로드
                 no_match_start_time = None  # 비매칭 시간 초기화
 
