@@ -6,7 +6,10 @@ import numpy as np
 import os
 import json
 import time
+import uuid
+import hashlib
 from deepface import DeepFace  # DeepFace 추가
+
 
 # CUDA 사용 여부 확인
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -15,6 +18,13 @@ if torch.cuda.is_available():
 else:
     print("Using CPU")
 
+# 해시된 UUID 생성 함수
+def generate_hashed_uuid(length=8):
+    full_uuid = str(uuid.uuid4())
+    hash_object = hashlib.sha256(full_uuid.encode())
+    hashed_uuid = hash_object.hexdigest()[:length]  # 원하는 길이로 자름
+    return hashed_uuid
+    
 # 모델 초기화
 mtcnn = MTCNN(keep_all=False, device=device)  # 얼굴 검출용
 facenet = InceptionResnetV1(pretrained='vggface2').eval().to(device)  # 얼굴 임베딩 추출용
@@ -49,7 +59,8 @@ def extract_embedding_and_boxes(image):
 
 # 새로운 얼굴의 임베딩 및 메타데이터 저장
 def save_new_face_and_embedding(embedding, folder_path, metadata, face_image):
-    file_name = input("이름을 입력하세요: ")  # 사용자로부터 이름 입력
+    user_name = input("이름을 입력하세요: ")  # 사용자로부터 이름 입력
+    user_id = generate_hashed_uuid(4)  # 4자리 해시된 UUID 생성
 
     # JSON 파일 경로
     metadata_path = os.path.join(folder_path, "face_metadata.json")
@@ -62,11 +73,6 @@ def save_new_face_and_embedding(embedding, folder_path, metadata, face_image):
             except json.JSONDecodeError:
                 print("Metadata file is corrupted. Reinitializing...")
                 metadata = {}
-
-    # 중복 확인
-    if file_name in metadata:
-        print(f"{file_name}는 이미 등록된 사용자입니다.")
-        return
 
     # DeepFace 분석
     try:
@@ -87,17 +93,18 @@ def save_new_face_and_embedding(embedding, folder_path, metadata, face_image):
         gender = 'Unknown'
 
     # 새로운 데이터 추가
-    metadata[file_name] = {
-        "embedding": embedding.tolist(),
+    metadata[user_id] = {
+        "name": user_name,
         "age": age,
-        "gender": gender
+        "gender": gender,
+        "embedding": embedding.tolist()
     }
 
     # JSON 파일에 저장
     with open(metadata_path, "w", encoding="utf-8") as file:
         json.dump(metadata, file, indent=4, ensure_ascii=False)
 
-    print(f"{file_name}님의 임베딩 정보와 분석 결과가 저장되었습니다.")
+    print(f"{user_name}님의 임베딩 정보와 분석 결과가 저장되었습니다.")
 
 # 폴더 내 모든 이미지 로드 및 임베딩 추출
 def load_embeddings_from_folder(folder_path):
@@ -121,10 +128,11 @@ def load_embeddings_from_folder(folder_path):
                 json.dump(metadata, file, indent=4, ensure_ascii=False)
 
     # 임베딩 데이터 로드
-    for name, data in metadata.items():
-        embeddings[name] = np.array(data['embedding'])
+    for id, data in metadata.items():
+        embeddings[id] = (data['name'], np.array(data['embedding']))
 
     return embeddings
+
 
 # 기준 이미지 폴더 설정
 img_src_folder = 'img_src'
@@ -161,7 +169,6 @@ while cap.isOpened():
 
     # BGR -> RGB 변환
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    # 실시간 얼굴 임베딩 추출 및 얼굴 이미지 반환
     embedding, boxes, face_image = extract_embedding_and_boxes(frame_rgb)
 
     if embedding is not None:
@@ -169,42 +176,41 @@ while cap.isOpened():
         min_distance = float('inf')
 
         # 기준 얼굴들과 비교
-        for file_name, ref_embedding in reference_embeddings.items():
+        for file_id, ref_data in reference_embeddings.items():
+            ref_name, ref_embedding = ref_data
             distance = calculate_distance(ref_embedding, embedding)
             if distance < min_distance:
                 min_distance = distance
-                best_match = file_name if min_distance < 0.7 else "No Match"
+                best_match = file_id if min_distance < 0.7 else "No Match"
 
         if best_match != "No Match":
-            if not matched:  # 처음 매칭된 경우만 시간 기록
-                print(f"{best_match}님 환영합니다. 3초 뒤 종료됩니다.")
+            matched_name = reference_embeddings[best_match][0]
+            if not matched:
+                print(f"{matched_name}님 환영합니다. 3초 뒤 종료됩니다.")
                 match_start_time = time.time()
                 matched = True
-                no_match_start_time = None  # 매칭되면 비매칭 시간 초기화
+                no_match_start_time = None
 
-            # 바운딩 박스와 이름 표시
             if boxes is not None and len(boxes) > 0:
                 for box in boxes:
                     x1, y1, x2, y2 = [int(b) for b in box]
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    cv2.putText(frame, f"{best_match}", 
-                                (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                    cv2.putText(frame, f"{matched_name}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
             # 3초 후 종료
             if matched and time.time() - match_start_time > 3:
-                break
+                break  # 루프 탈출 조건 추가
         else:
             matched = False
-            if no_match_start_time is None:  # 비매칭 시작 시간 기록
+            if no_match_start_time is None:
                 no_match_start_time = time.time()
 
             if no_match_start_time and time.time() - no_match_start_time > 2:
                 print("새로운 얼굴이 감지되었습니다. 임베딩 정보를 저장합니다.")
                 save_new_face_and_embedding(embedding, img_src_folder, reference_embeddings, face_image)
-                reference_embeddings = load_embeddings_from_folder(img_src_folder)  # 새로 로드
-                no_match_start_time = None  # 비매칭 시간 초기화
+                reference_embeddings = load_embeddings_from_folder(img_src_folder)
+                no_match_start_time = None
 
-            # 매칭되지 않은 경우 바운딩 박스 표시
             if boxes is not None and len(boxes) > 0:
                 for box in boxes:
                     x1, y1, x2, y2 = [int(b) for b in box]
@@ -213,11 +219,9 @@ while cap.isOpened():
     else:
         print("No face detected.")
 
-    # 화면 출력
     cv2.imshow("Webcam Face Detection", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 cap.release()
 cv2.destroyAllWindows()
-
