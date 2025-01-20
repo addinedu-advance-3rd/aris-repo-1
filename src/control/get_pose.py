@@ -25,5 +25,7 @@ arm.set_state(state=0)
 
 ret = arm.get_position()
 print(ret)
+ret = arm.get_servo_angle(servo_id=6)
+print(f"gripper_position{ret}")
 
 arm.disconnect()
