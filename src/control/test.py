@@ -51,7 +51,7 @@ class A_Circle_Arm():
                       [252.956329, 109.117012, 482.582855, 84.924435, -82.6259, -167.982402],
                       [237.472427, 11.561559, 469.93689, 103.99946, -82.608024, 165.818741],
                       [30.640814, -242.950836, 475.663879, 58.721241, -82.001319, 118.777818],
-                      [156.644592, -94.609383, 159.885483, -98.206628, -84.13444, -153.788805],
+                      [156.644592, -94.609383, 150.885483, -98.206628, -84.13444, -153.788805],
                       [251.656921, 138.446381, 323.958588, 72.693046, -86.16357, -167.141185],
                       [166.209717, -86.796677, 202.458038, -87.493234, -81.706016, -172.962666],
                       [9.054959, -240.938965, 331.05481, 101.944776, -80.831167, -20.444509],
@@ -61,7 +61,8 @@ class A_Circle_Arm():
                       [-16.239532, 143.714157, 336.908478, -103.106907, -88.539053, 6.292853],
                       [-116.726761, -321.590057, 358.78952, 52.845158, -75.035813, 15.316365],
                       [-95.262672, -373.135468, 286.075012, -78.853374, -86.798981, 173.378805],
-                      [-48.123817, -197.722977, 282.662964, 25.46362, -84.609824, 60.776097]]
+                      [-48.123817, -197.722977, 282.662964, 25.46362, -84.609824, 60.776097],
+                      [283.96933, -2.311633, 480.578888, 123.41551, -79.495201, 75.265741]]
         """
         0: 대략적 아이스크립팩 1번자리 위치. 
         1: 대략적 아이스크립팩 2번자리 위치.
@@ -80,12 +81,13 @@ class A_Circle_Arm():
         14: 아이스크림 위쪽 안전위치
         15: 사람.
         16: 디폴트
+        17: 5 - 8 중간단계
         """
         self.routes = {"default_to_ice_1": [16, 0],
                        "ice_1_to_in_press": [0, 14, 5, 4, 3],
                        "ice_2_to_in_press": [1, 14, 5 ,4, 3],
                        "ice_3_to_in_press": [2, 14, 5, 4, 3],
-                       "in_press_to_cup": [3, 4, 5, 8, 6],
+                       "in_press_to_cup": [3, 4, 5, 17, 8, 6],
                        "cup_to_topping_1": [6, 8, 9, 10, 11],
                        "topping_1_to_topping_2": [11, 12],
                        "topping_2_to_topping_3": [12, 13],
@@ -113,26 +115,32 @@ class A_Circle_Arm():
 
     def _grap(self, gripper=True):
         if gripper:
-            self.arm.close_lite6_gripper()
+            self.arm.close_lite6_gripper() # close 한 상태로 유지해야만 잡고있는지 ? 테스트
             time.sleep(1)
-            self.arm.stop_lite6_gripper()
         else:
             self.arm.open_lite6_gripper()
             time.sleep(1)
             self.arm.stop_lite6_gripper()
             
     def run(self):
+        self._grap(False)
         self._move_one_path("default_to_ice_1")
+        self._grap(True)
         self._move_one_path("ice_1_to_in_press")
+        self._grap(False)
         self._move_one_path("in_press_to_cup")
-        self._move_one_path("cup_to_topping_1")
+        self._grap(True)
+        self._move_one_path("cup_to_topping_1") # 이부분에 그리퍼 회전
         self._move_one_path("topping_1_to_topping_2")
         self._move_one_path("topping_2_to_topping_3")
         self._move_one_path("toping_3_to_under_press")
         self._move_one_path("under_press_to_person")
         self._move_one_path("person_to_default")
+        self._grap(False)
 
 if __name__ == "__main__":
     my_arm = A_Circle_Arm("192.168.1.182")
-    # my_arm.move_a_point(8)
+    # my_arm._move_one_path("person_to_default")
+    # my_arm.move_a_point(6)
     my_arm.run()
+    # my_arm._grap(True)
