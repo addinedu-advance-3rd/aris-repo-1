@@ -6,6 +6,9 @@ import numpy as np
 import os
 import time
 import threading
+import json
+from deepface import DeepFace  # DeepFace 추가
+
 
 img_src_folder = 'img_src'
 img_src_test_folder = 'img_src_test'
@@ -28,6 +31,7 @@ facenet = InceptionResnetV1(pretrained='vggface2').eval().to(device)  # 얼굴 �
 def calculate_distance(embedding1, embedding2):
     return np.linalg.norm(embedding1 - embedding2)
 
+# 얼굴 임베딩 및 바운딩 박스 추출 함수
 def extract_embedding_and_boxes(image):
     """이미지에서 얼굴 검출 후 첫 번째 얼굴의 임베딩과 바운딩 박스를 반환"""
     boxes, _ = mtcnn.detect(image)
@@ -111,8 +115,7 @@ print("Press 'q' to quit.")
 match_start_time = None  # 매칭된 시간을 저장
 no_match_start_time = None  # 매칭되지 않은 시간을 기록
 matched = False  # 매칭 상태를 저장
-detection_staus = False
-current_user = None
+current_user = None # 사용자 변경시 초기화 하는 플래그
 
 
 while cap.isOpened():
@@ -126,7 +129,6 @@ while cap.isOpened():
     embedding, boxes = extract_embedding_and_boxes(frame_rgb)
 
     if embedding is not None: #얼굴이 있긴할때
-        detection_staus = True
         best_match = "No Match"
         min_distance = float('inf')
 
@@ -190,8 +192,6 @@ while cap.isOpened():
             elif embedding is not None and boxes is not None and len(boxes) > 0:
                 # 얼굴이 다시 확인되면 NO MATCH 상태 초기화
                 print("얼굴이 다시 확인되었습니다.")
-                
-
 
             # 매칭되지 않은 경우 바운딩 박스 표시
             if boxes is not None and len(boxes) > 0:
