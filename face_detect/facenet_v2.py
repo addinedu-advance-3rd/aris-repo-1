@@ -135,7 +135,8 @@ def load_embeddings_from_folder(folder_path):
 
 
 # 기준 이미지 폴더 설정
-img_src_folder = '.'
+img_src_folder = 'img_src'
+os.makedirs(img_src_folder, exist_ok=True)
 
 # 메타데이터 로드
 reference_embeddings = load_embeddings_from_folder(img_src_folder)
@@ -185,13 +186,9 @@ while cap.isOpened():
 
         if best_match != "No Match":
             matched_name = reference_embeddings[best_match][0]
-            matched_key = best_match
             if not matched:
                 print(f"{matched_name}님 환영합니다. 3초 뒤 종료됩니다.")
-                current_user = matched_key  #id로 변경완료
-
-                #print(matched_key) id 잘나오나 확인
-                
+                current_user = matched_name # todo: id 로 저장해야됨
                 match_start_time = time.time()
                 matched = True
                 no_match_start_time = None
@@ -203,13 +200,13 @@ while cap.isOpened():
                     cv2.putText(frame, f"{matched_name}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
             # 3초 후 종료
-            if current_user == matched_key:
+            if current_user == matched_name:
                 if matched and time.time() - match_start_time > 3:
                     print(f"{matched_name}님 환영합니다. 이제 종료합니다.")
                     break  # 루프 탈출 조건 추가
             else:
                 # 현재 사용자와 매칭된 사용자가 달라지면 초기화
-                print(f"사용자가 변경되었습니다: 이전 사용자: {reference_embeddings[current_user][0]}, 새 사용자: {matched_name}")
+                print(f"사용자가 변경되었습니다: 이전 사용자: {current_user}, 새 사용자: {matched_name}")
                 current_user = None
                 match_start_time = None
                 matched = False        
