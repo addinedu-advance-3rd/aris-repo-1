@@ -204,7 +204,7 @@ while cap.isOpened():
 
             # 3초 후 종료
             if current_user == matched_key:
-                if matched and time.time() - match_start_time > 3:
+                if matched and match_start_time is not None and time.time() - match_start_time > 3:
                     print(f"{matched_name}님 환영합니다. 이제 종료합니다.")
                     break  # 루프 탈출 조건 추가
             else:
