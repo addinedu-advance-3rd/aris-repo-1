@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Play Captured Video</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+</head>
+<body>
+  <h1>Captured Video</h1>
+
+  <!-- 비디오 -->
+  <video id="captured-video" width="640" height="480" controls autoplay></video>
+
+  <!-- 공유 및 QR 코드 -->
+  <div id="share-section">
+    <button id="share-button">Share Video</button>
+    <div id="qr-code"></div>
+  </div>
+
+  <!-- 돌아가기 버튼 -->
+  <button id="back">돌아가기</button>
+
+  <script>
+    // 최신 영상 가져오기 및 설정
+    fetch('/latest-video')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch latest video');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (!data || !data.url) {
+        throw new Error('Invalid video URL');
+    }
+        const videoElement = document.getElementById('captured-video');
+        const fullVideoUrl = window.location.origin + data.url; // 최신 영상의 전체 URL
+  
+        // 최신 영상 URL 설정
+        videoElement.src = data.url;
+        videoElement.controls = true;
+        videoElement.play();
+  
+        // QR 코드 생성
+        const qrCodeContainer = document.getElementById('qr-code');
+        QRCode.toCanvas(qrCodeContainer, fullVideoUrl, (error) => {
+          if (error) {
+            console.error('QR Code generation failed:', error);
+          } else {
+            console.log('QR Code generated for:', fullVideoUrl);
+          }
+        });
+  
+        // 공유 버튼 동작
+        document.getElementById('share-button').addEventListener('click', () => {
+          if (navigator.share) {
+            navigator.share({
+              title: 'Captured Video',
+              text: 'Check out this video I captured!',
+              url: fullVideoUrl
+            })
+              .then(() => console.log("Video shared successfully."))
+              .catch(err => console.error("Error sharing video:", err));
+          } else {
+            alert("Your device does not support sharing.");
+          }
+        });
+      })
+      .catch(err => {
+        console.error('Error fetching latest video:', err);
+        document.body.innerHTML = '<h2>Failed to load the latest video</h2>';
+      });
+  
+    // 돌아가기 버튼 동작
+    document.getElementById('back').addEventListener('click', () => {
+      window.location.href = '/index.html';
+    });
+  </script>
+  
+</body>
+</html>
