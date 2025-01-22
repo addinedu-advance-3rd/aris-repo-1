@@ -1,0 +1,17 @@
+# A의 DockerFile
+FROM python:3.10-slim
+
+# 작업 디렉토리 설정
+WORKDIR /app
+
+# 의존성 파일 복사 (필요한 경우 requirements.txt를 포함)
+COPY ./A_container/requirements.txt /app/
+
+# 의존성 설치
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 소스 코드 복사
+COPY ./A_container/app.py /app/
+
+# # 애플리케이션 실행 (예시: `app.py` 실행)
+CMD ["python", "app.py"]

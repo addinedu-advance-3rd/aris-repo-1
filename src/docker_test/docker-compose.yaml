@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  service_a:
+    build:
+      context: .
+      dockerfile: ./A_container/DockerFile  # A_container 폴더 내의 Dockerfile 사용
+    networks:
+      custom_network:
+        ipv4_address: 172.28.0.2  # 고정 IP 설정
+    ports:
+      - "12345:12345"  # 외부 포트 노출
+    depends_on:
+      - service_b  # 서비스 B가 시작된 후 서비스 B 시작
+  service_b:
+    build:
+      context: .
+      dockerfile: ./B_container/DockerFile  # B_container 폴더 내의 Dockerfile 사용
+    networks:
+      custom_network:
+        ipv4_address: 172.28.0.3  # 고정 IP 설정
+    
+
+networks:
+  custom_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16  # 네트워크 서브넷 설정
