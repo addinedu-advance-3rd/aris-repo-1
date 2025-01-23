@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Webcam Video Recorder</title>
+  <style>
+    /* 기본 스타일 */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-color: #f4f4f9;
+      color: #333;
+    }
+
+    h1 {
+      margin-top: 20px;
+      font-size: 2em;
+      color: #444;
+    }
+
+    /* 비디오 스타일 */
+    #video {
+      margin: 20px 0;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 상태 메시지 */
+    #status {
+      font-size: 1.2em;
+      margin: 10px 0;
+      color: #777;
+    }
+
+    /* 버튼 스타일 */
+    button {
+      padding: 12px 20px;
+      font-size: 1em;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    /* 반응형 디자인 */
+    @media (max-width: 768px) {
+      #video {
+        width: 90%;
+        height: auto;
+      }
+
+      button {
+        width: 90%;
+        font-size: 1em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Webcam Video Recorder</h1>
+
+  <!-- 비디오 -->
+  <video id="video" width="640" height="480" autoplay muted></video>
+
+  <!-- 촬영 버튼 -->
+  <button id="start">촬영 시작</button>
+
+  <!-- 상태 메시지 -->
+  <p id="status"></p>
+
+  <script type="module" src="memory.js"></script>
+</body>
+</html>
