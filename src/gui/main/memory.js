@@ -1,0 +1,70 @@
+let mediaRecorder;
+let recordedChunks = [];
+let videoStream;
+const videoElement = document.getElementById('video');
+const startButton = document.getElementById('start');
+const status = document.getElementById('status');
+
+// 웹캠 스트림 초기화
+navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+  .then(function(stream) {
+    videoStream = stream;
+    videoElement.srcObject = stream;
+
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = function(event) {
+      if (event.data.size > 0) {
+        recordedChunks.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = function() {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      recordedChunks = [];
+      uploadVideo(blob); // 업로드 및 리디렉션
+    };
+
+    status.textContent = "Webcam 초기화 완료.";
+  })
+  .catch(function(err) {
+    console.error("Error accessing webcam:", err);
+    status.textContent = "카메라를 사용할 수 없습니다.";
+  });
+
+// 촬영 시작 버튼
+startButton.addEventListener('click', function() {
+  if (!mediaRecorder) {
+    status.textContent = "MediaRecorder가 초기화되지 않았습니다.";
+    return;
+  }
+  recordedChunks = [];
+  mediaRecorder.start();
+  status.textContent = "촬영 중...";
+  startButton.disabled = true;
+
+  setTimeout(() => {
+    mediaRecorder.stop();
+    status.textContent = "촬영 완료! 업로드 중...";
+  }, 5000);
+});
+
+// 업로드 및 리디렉션
+function uploadVideo(blob) {
+  const formData = new FormData();
+  formData.append('video', blob, 'recorded_video.webm');
+
+  fetch('http://localhost:3001/upload', {
+    method: 'POST',
+    body: formData
+  })
+    .then(response => response.json())
+    .then(data => {
+      console.log("Video uploaded successfully:", data.url);
+      // 업로드 후 play.html로 리디렉션
+      window.location.href = `/play.html?video=${encodeURIComponent(data.url)}`;
+    })
+    .catch(error => {
+      console.error("Upload failed:", error);
+      status.textContent = "업로드 실패!";
+    });
+}
