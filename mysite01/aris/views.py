@@ -10,6 +10,7 @@ def db_update(request):
     # load_json_and_save_to_db 함수 호출
     try:
         load_json_and_save_to_db()  # JSON 파일을 로드하고 DB에 저장
+        
         return JsonResponse({'status': 'success', 'message': 'Database updated successfully.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})

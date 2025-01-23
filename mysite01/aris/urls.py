@@ -9,5 +9,5 @@ router.register(r'Customers', CusViewSet)
 
 urlpatterns = [
     path('', views.db_update),
-    #path('', include(router.urls)),
+    path('', include(router.urls)),
 ]
