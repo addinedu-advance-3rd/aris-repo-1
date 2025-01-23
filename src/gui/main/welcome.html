@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Welcome New Customer</title>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const nicknameInput = document.getElementById('nickname');
+      const form = document.getElementById('nickname-form');
+
+      // 닉네임 입력 후 처리
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const nickname = nicknameInput.value.trim();
+        if (nickname) {
+          localStorage.setItem('customerNickname', nickname); // 닉네임 저장
+          window.location.href = '/topping.html'; // 토핑 선택 페이지로 이동
+        }
+      });
+
+      // 기존 고객 확인
+      if (localStorage.getItem('customerNickname')) {
+        window.location.href = '/topping.html'; // 기존 고객은 닉네임 입력 생략
+      }
+    });
+  </script>
+</head>
+<body>
+  <h1>반갑습니다! 닉네임을 입력해주세요</h1>
+  <form id="nickname-form">
+    <input type="text" id="nickname" placeholder="닉네임을 입력하세요" required />
+    <button type="submit">확인</button>
+  </form>
+</body>
+</html>
