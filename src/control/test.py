@@ -164,8 +164,5 @@ class A_Circle_Arm():
 
 if __name__ == "__main__":
     my_arm = A_Circle_Arm("192.168.1.182")
-    # my_arm._move_one_path("cup_to_front_topping")
-    # my_arm.move_a_point(14)
-    my_arm.run()
-    # my_arm._control_last_joint(90)
-    # my_arm._grap(True) 
+    print(my_arm)
+    # my_arm.run()

@@ -179,6 +179,8 @@ def load_embeddings_from_folder(folder_path):
 img_src_folder = '.'
 
 def gen_frames():
+    global analysis_thread
+    global analysis_results
     # 메타데이터 로드
     reference_embeddings = load_embeddings_from_folder(img_src_folder)
     if not reference_embeddings:
@@ -318,9 +320,10 @@ def gen_frames():
                 print("Stopping background analysis because face is gone.")
                 # In practice, you'd have a mechanism to kill or ignore the thread.
 
-        cv2.imshow("Webcam Face Detection", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        ret, buffer = cv2.imencode('.jpg', frame)
+        frame = buffer.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
     cap.release()
 
