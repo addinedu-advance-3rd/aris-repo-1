@@ -22,4 +22,4 @@ COPY . /app/
 # 애플리케이션 실행
 CMD ["python", "facenet.py"]
 
-# sudo docker run --gpus '"device=0"' [container_name]
+# sudo docker run -it --device /dev/video0:/dev/video0 --gpus '"device=0"' -p 5000:5000 507c10e0d63f /bin/bash

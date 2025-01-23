@@ -5,11 +5,11 @@ from torchvision import transforms
 import numpy as np
 import os
 import json
-import time
 import uuid
 import hashlib
-from deepface import DeepFace  # DeepFace 추가
-import threading  # <-- NEW: for async analysis
+import threading
+from deepface import DeepFace
+from flask import Flask, render_template, Response
 
 # -----------------------------
 # Global variables for threading
@@ -17,6 +17,8 @@ analysis_thread = None
 analysis_results = None
 # -----------------------------
 
+# Flask 애플리케이션 생성
+app = Flask(__name__)
 
 # CUDA 사용 여부 확인
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -25,6 +27,10 @@ if torch.cuda.is_available():
 else:
     print("Using CPU")
 
+# 모델 초기화
+mtcnn = MTCNN(keep_all=False, device=device)  # 얼굴 검출용
+facenet = InceptionResnetV1(pretrained='vggface2').eval().to(device)  # 얼굴 임베딩 추출용
+
 # 해시된 UUID 생성 함수
 def generate_hashed_uuid(length=8):
     full_uuid = str(uuid.uuid4())
@@ -32,18 +38,13 @@ def generate_hashed_uuid(length=8):
     hashed_uuid = hash_object.hexdigest()[:length]  # 원하는 길이로 자름
     return hashed_uuid
     
-# 모델 초기화
-mtcnn = MTCNN(keep_all=False, device=device)  # 얼굴 검출용
-facenet = InceptionResnetV1(pretrained='vggface2').eval().to(device)  # 얼굴 임베딩 추출용
-
-# 그대로 유지: DeepFace 분석 함수 (no changes)
+# DeepFace 분석 함수
 def analyze_face_with_deepface(face_image):
     try:
         analysis = DeepFace.analyze(face_image, actions=['age', 'gender'], enforce_detection=False)
         if isinstance(analysis, list):
             analysis = analysis[0]
         age = analysis.get('age', 'Unknown')
-        # Check if gender is a dict of probabilities
         if isinstance(analysis.get('gender'), dict):
             gender_prob = analysis['gender']
             gender = max(gender_prob, key=gender_prob.get)
@@ -54,14 +55,12 @@ def analyze_face_with_deepface(face_image):
         print(f"DeepFace 분석 중 오류 발생: {e}")
         return 'Unknown', 'Unknown'
 
-# NEW: Background thread function to run DeepFace analyze
+# 백그라운드에서 DeepFace 분석을 실행하는 함수
 def analyze_face_in_background(face_image):
     global analysis_results
-    # This will run in a separate thread to avoid blocking
     results = analyze_face_with_deepface(face_image)
     analysis_results = results
     print("DeepFace analysis done in background:", results)
-
 
 # 얼굴 비교 함수 (유클리드 거리 계산)
 def calculate_distance(embedding1, embedding2):
@@ -115,8 +114,6 @@ def save_new_face_and_embedding(embedding, folder_path, metadata, face_image, an
         # fallback if something went wrong in the thread
         age, gender = ('Unknown', 'Unknown')
 
-
-
     # 새로운 데이터 추가
     metadata[user_id] = {
         "name": user_name,
@@ -158,7 +155,6 @@ def load_embeddings_from_folder(folder_path):
 
     return embeddings
 
-
 # 기준 이미지 폴더 설정
 img_src_folder = '.'
 
@@ -169,141 +165,76 @@ if not reference_embeddings:
 else:
     print(f"Loaded {len(reference_embeddings)} reference embeddings.")
 
-# 웹캠으로 실시간 얼굴 검출 및 비교
-cap = cv2.VideoCapture(0)
+# OpenCV로 웹캠에서 실시간으로 영상 스트리밍
+def gen_frames():
+    analysis_thread = None
+    cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 600)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-# 해상도 설정
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 600)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    if not cap.isOpened():
+        print("Failed to open webcam.")
+        exit()
 
-if not cap.isOpened():
-    print("Failed to open webcam.")
-    exit()
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-print("Press 'q' to quit.")
-match_start_time = None  # 매칭된 시간을 저장
-no_match_start_time = None  # 매칭되지 않은 시간을 기록
-matched = False  # 매칭 상태를 저장
-current_user = None # 사용자 변경시 초기화 하는 플래그
+        # BGR -> RGB 변환
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        embedding, boxes, face_image = extract_embedding_and_boxes(frame_rgb)
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        print("Failed to read from webcam.")
-        break
+        if embedding is not None:
+            best_match = "No Match"
+            min_distance = float('inf')
 
-    # BGR -> RGB 변환
-    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    embedding, boxes, face_image = extract_embedding_and_boxes(frame_rgb)
+            # 기준 얼굴들과 비교
+            for file_id, ref_data in reference_embeddings.items():
+                ref_name, ref_embedding = ref_data
+                distance = calculate_distance(ref_embedding, embedding)
+                if distance < min_distance:
+                    min_distance = distance
+                    best_match = file_id if min_distance < 0.7 else "No Match"
 
-    if embedding is not None: # 얼굴이 있는 상태
-        best_match = "No Match"
-        min_distance = float('inf')
+            if best_match != "No Match":
+                matched_name = reference_embeddings[best_match][0]
+                if boxes is not None and len(boxes) > 0:
+                    for box in boxes:
+                        x1, y1, x2, y2 = [int(b) for b in box]
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                        cv2.putText(frame, f"{matched_name}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
-        # 기준 얼굴들과 비교
-        for file_id, ref_data in reference_embeddings.items():
-            ref_name, ref_embedding = ref_data
-            distance = calculate_distance(ref_embedding, embedding)
-            if distance < min_distance:
-                min_distance = distance
-                best_match = file_id if min_distance < 0.7 else "No Match"
-
-        if best_match != "No Match":
-            matched_name = reference_embeddings[best_match][0]
-            matched_key = best_match
-            if not matched:
-                print(f"{matched_name}님 환영합니다. 3초 뒤 종료됩니다.")
-                current_user = matched_key  #id로 변경완료
-
-                #print(matched_key) id 잘나오나 확인
-                
-                match_start_time = time.time()
-                matched = True
-                no_match_start_time = None
-
-            if boxes is not None and len(boxes) > 0:
-                for box in boxes:
-                    x1, y1, x2, y2 = [int(b) for b in box]
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    cv2.putText(frame, f"{matched_name}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-
-            # 3초 후 종료
-            if current_user == matched_key:
-                if matched and match_start_time is not None and time.time() - match_start_time > 3:
-                    print(f"{matched_name}님 환영합니다. 이제 종료합니다.")
-                    break  # 루프 탈출 조건 추가
             else:
-                # 현재 사용자와 매칭된 사용자가 달라지면 초기화
-                print(f"사용자가 변경되었습니다: 이전 사용자: {reference_embeddings[current_user][0]}, 새 사용자: {matched_name}")
-                if analysis_thread and analysis_thread.is_alive():
-                    print("Stopping background analysis because user changed.")
-                    # There's no direct 'stop' in Python threads, but we can ignore results.
-                    # In a more robust design, you'd have a shared variable to indicate "stop".
-                current_user = None
-                match_start_time = None
-                matched = False        
+                # No match case
+                if (analysis_thread is None or not analysis_thread.is_alive()):
+                    print("New face detected: Starting DeepFace analysis in background...")
+                    analysis_results = None
+                    analysis_thread = threading.Thread(target=analyze_face_in_background, args=(face_image,))
+                    analysis_thread.start()
 
-        else: # best_match = "No Match"
-            # NEW FACE DETECTED: start background analysis immediately (if not running)
-            if (analysis_thread is None or not analysis_thread.is_alive()):
-                print("New face detected: Starting DeepFace analysis in background...")
-                # Reset analysis_results so we know we have fresh data
-                analysis_results = None
-                analysis_thread = threading.Thread(target=analyze_face_in_background,
-                                                   args=(face_image,))
-                analysis_thread.start()
+                matched = False
+                if boxes is not None and len(boxes) > 0:
+                    for box in boxes:
+                        x1, y1, x2, y2 = [int(b) for b in box]
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                        cv2.putText(frame, "No Match", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
 
-            matched = False # 매칭이 실패한 경우 상태 초기화
-            if no_match_start_time is None:
-                no_match_start_time = time.time()
-            
-            # 매칭되지 않고 2초 이상 경과한 경우
-            if no_match_start_time and time.time() - no_match_start_time > 2:
-                print("새로운 얼굴이 감지되었습니다. 임베딩 정보를 저장합니다.")
+        ret, buffer = cv2.imencode('.jpg', frame)
+        frame = buffer.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
-                # 얼굴 재확인
-                embedding, boxes, face_image= extract_embedding_and_boxes(frame_rgb)
-                if embedding is not None and boxes is not None and len(boxes) > 0:
-                    print("얼굴이 확인되었습니다. 이미지를 저장합니다.")
-                    if analysis_thread is not None and analysis_thread.is_alive():
-                        print("Waiting for DeepFace analysis to finish...")
-                        # You can block indefinitely or use a timeout
-                        analysis_thread.join()
+    cap.release()
 
-                    save_new_face_and_embedding(embedding, 
-                    img_src_folder, reference_embeddings, face_image,
-                    analysis_results
-                    )
+# Flask 라우팅 설정
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-                    reference_embeddings = load_embeddings_from_folder(img_src_folder)
-                    no_match_start_time = None
-                else:
-                    print("얼굴이 사라졌습니다. NO MATCH ")
-                    no_match_start_time = None
-                no_match_start_time = None
-            elif embedding is not None and boxes is not None and len(boxes) > 0:
-                # 얼굴이 다시 확인되면 NO MATCH 상태 초기화
-                print("얼굴이 다시 확인되었습니다.")
-                # 맞나..? 
-                # no_match_start_time = None
+@app.route('/video')
+def video():
+    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-            # 매칭되지 않은 경우 바운딩 박스 표시
-            if boxes is not None and len(boxes) > 0:
-                for box in boxes:
-                    x1, y1, x2, y2 = [int(b) for b in box]
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                    cv2.putText(frame, "No Match", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-    else:
-        print("No face detected.")
-        no_match_start_time = None
-        match_start_time = None
-        if analysis_thread and analysis_thread.is_alive():
-            print("Stopping background analysis because face is gone.")
-            # In practice, you'd have a mechanism to kill or ignore the thread.
-
-    cv2.imshow("Webcam Face Detection", frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', threaded=True)
