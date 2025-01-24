@@ -354,36 +354,43 @@ def gen_frames():
 
     cap.release()
 
-# Flask 라우팅 설정
-# @app.route('/')
-# def index():
-#     return render_template('index.html')
 @app.route('/video')
 def video():
     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
- 
 @app.route('/submit_name', methods=['POST'])
 def submit_name():
     global pending_input
     global pending_face_data
+
+    print('submit name started')
+    print('submit name started')
+    print('submit name started')
+    print('submit name started')
+
+    if not pending_input :
+        return jsonify({"error": "No pending input"}), 400
 
     if not pending_input or not pending_face_data:
         return jsonify({"error": "No face pending for input"}), 400
 
     embedding, boxes, face_image = pending_face_data
 
+    print(len(embedding))
+    print(len(boxes))
+    print(len(face_image))
     data = request.json
-    user_name = data.get('name')
+    user_name = data.get('name')  # 클라이언트에서 전달된 닉네임
     if not user_name:
         return jsonify({"error": "Name is required"}), 400
 
-    embedding, face_image = pending_face_data
+    # 얼굴 데이터 저장
     save_new_face_and_embedding(embedding, img_src_folder, {}, face_image, user_name)
+
+    # 상태 초기화
     pending_input = False
     pending_face_data = None
     return jsonify({"message": f"Face saved for {user_name}"}), 200
-
 
 
 @app.route('/check_face', methods=['GET'])

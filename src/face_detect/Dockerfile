@@ -18,6 +18,7 @@ RUN apt-get update -y && \
 
 # 소스 코드 복사
 COPY . /app/
+COPY ./weights/ /root/.deepface/weights/
 
 # 애플리케이션 실행
 CMD ["python", "facenet.py"]

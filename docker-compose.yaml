@@ -21,6 +21,7 @@ services:
       context: ./src/face_detect
       dockerfile: Dockerfile
     container_name: face_detect_service
+    restart : always
     runtime: nvidia  # GPU 사용
     environment:
       - NVIDIA_VISIBLE_DEVICES=0  # GPU 0 사용 (첫 번째 GPU)
@@ -46,6 +47,12 @@ services:
       - ENV_VAR_NAME=value  # 필요한 환경 변수 추가 (예시)
     ports:
       - "0.0.0.0:3001:3001"  # 호스트의 3000 포트를 모든 인터페이스에서 접근 가능하게 매핑
+    depends_on:
+      - face_detect  # face_detect 서비스 의존성 추가
+    environment:
+      - FACE_DETECT_URL=http://face_detect_service:5000/video  # 환경 변수로 URL 전달
+
+  
 
 networks:
   bridge_network:
