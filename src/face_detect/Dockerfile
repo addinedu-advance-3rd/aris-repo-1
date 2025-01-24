@@ -21,6 +21,6 @@ COPY . /app/
 COPY ./weights/ /root/.deepface/weights/
 
 # 애플리케이션 실행
-CMD ["python", "facenet.py"]
+CMD ["python", "new_facenet.py"]
 
 # sudo docker run -it --device /dev/video0:/dev/video0 --gpus '"device=0"' -p 5000:5000 507c10e0d63f /bin/bash

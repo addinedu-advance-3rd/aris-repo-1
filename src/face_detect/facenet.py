@@ -21,6 +21,8 @@ from threading import Lock
 # Global variables for threading
 analysis_thread = None
 analysis_results = None
+new_user_name = None
+name_ready = False
 # -----------------------------
 
 app = Flask(__name__)
@@ -118,10 +120,10 @@ def extract_embedding_and_boxes(image):
         return None, None, None
 
 # 새로운 얼굴의 임베딩 및 메타데이터 저장
-def save_new_face_and_embedding(embedding, folder_path, metadata, face_image, analysis_results):
+def save_new_face_and_embedding(embedding, folder_path, metadata, face_image, user_name, analysis_results):
     # user_name = input("이름을 입력하세요: ")  # 사용자로부터 이름 입력
     user_id = generate_hashed_uuid(4)  # 4자리 해시된 UUID 생성
-
+    print(f"user를 새롭게 저장합니다 ~~~~ user_id : {user_id}")
     # JSON 파일 경로
     metadata_path = os.path.join(folder_path, "face_metadata.json")
 
@@ -206,6 +208,7 @@ def gen_frames():
     global analysis_results
     global pending_input
     global pending_face_data
+    global new_user_name
     # 메타데이터 로드
     reference_embeddings = load_embeddings_from_folder(img_src_folder)
     if not reference_embeddings:
@@ -257,7 +260,7 @@ def gen_frames():
                 matched_name = reference_embeddings[best_match][0]
                 matched_key = best_match
                 if not matched:
-                    print(f"{matched_name}님 환영합니다. 3초 뒤 종료됩니다.")
+                    print(f"{matched_name}님 환영합니다. 3초 뒤 종료됩니다.",flush=True)
                     current_user = matched_key  #id로 변경완료
 
                     #print(matched_key) id 잘나오나 확인
@@ -275,13 +278,13 @@ def gen_frames():
                 # 3초 후 종료
                 if current_user == matched_key:
                     if matched and match_start_time is not None and time.time() - match_start_time > 3:
-                        print(f"{matched_name}님 환영합니다. 이제 종료합니다.")
+                        print(f"{matched_name}님 환영합니다. 이제 종료합니다.",flush=True)
                         break  # 루프 탈출 조건 추가
                 else:
                     # 현재 사용자와 매칭된 사용자가 달라지면 초기화
                     print(f"사용자가 변경되었습니다: 이전 사용자: {reference_embeddings[current_user][0]}, 새 사용자: {matched_name}")
                     if analysis_thread and analysis_thread.is_alive():
-                        print("Stopping background analysis because user changed.")
+                        print("Stopping background analysis because user changed.",flush=True)
                         # There's no direct 'stop' in Python threads, but we can ignore results.
                         # In a more robust design, you'd have a shared variable to indicate "stop".
                     current_user = None
@@ -291,7 +294,7 @@ def gen_frames():
             else: # best_match = "No Match"
                 # NEW FACE DETECTED: start background analysis immediately (if not running)
                 if (analysis_thread is None or not analysis_thread.is_alive()):
-                    print("New face detected: Starting DeepFace analysis in background...")
+                    print("New face detected: Starting DeepFace analysis in background...",flush=True)
                     # Reset analysis_results so we know we have fresh data
                     analysis_results = None
                     analysis_thread = threading.Thread(target=analyze_face_in_background,
@@ -305,7 +308,7 @@ def gen_frames():
                 # 매칭되지 않고 2초 이상 경과한 경우
                 if no_match_start_time and time.time() - no_match_start_time > 2:
                 
-                    print("새로운 얼굴이 감지되었습니다. 임베딩 정보를 저장합니다.")
+                    print("새로운 얼굴이 감지되었습니다. 임베딩 정보를 저장합니다.",flush=True)
                     pending_input = True
 
                     # 얼굴 재확인
@@ -318,8 +321,8 @@ def gen_frames():
                             # You can block indefinitely or use a timeout
                             analysis_thread.join()
 
-                        # docker submit_name 으로 이동
-                        # save_new_face_and_embedding(embedding, img_src_folder, reference_embeddings,face_image, analysis_results)
+
+                        save_new_face_and_embedding(embedding, img_src_folder, reference_embeddings, face_image, new_user_name, analysis_results)
 
                         reference_embeddings = load_embeddings_from_folder(img_src_folder)
                         no_match_start_time = None
@@ -362,11 +365,14 @@ def video():
 def submit_name():
     global pending_input
     global pending_face_data
+    global analysis_results
+    global new_user_name
+    global pending_name
 
-    print('submit name started')
-    print('submit name started')
-    print('submit name started')
-    print('submit name started')
+    print('submit name started', flush=True)
+    print('submit name started', flush=True)
+    print('submit name started', flush=True)
+    print('submit name started', flush=True)
 
     if not pending_input :
         return jsonify({"error": "No pending input"}), 400
@@ -374,23 +380,30 @@ def submit_name():
     if not pending_input or not pending_face_data:
         return jsonify({"error": "No face pending for input"}), 400
 
+    print('embedding,box,face_image', flush=True)
     embedding, boxes, face_image = pending_face_data
 
-    print(len(embedding))
-    print(len(boxes))
-    print(len(face_image))
+    print(len(embedding), flush = True)
+    print(len(boxes), flush = True)
+    print(len(face_image), flush = True)
     data = request.json
-    user_name = data.get('name')  # 클라이언트에서 전달된 닉네임
-    if not user_name:
+    new_user_name = data.get('name')  # 클라이언트에서 전달된 닉네임
+    name_ready = True
+    if not new_user_name:
         return jsonify({"error": "Name is required"}), 400
+    
 
-    # 얼굴 데이터 저장
-    save_new_face_and_embedding(embedding, img_src_folder, {}, face_image, user_name)
+    # 분석 결과 확인
+    if analysis_results is None:
+        return jsonify({"error": "Analysis results not ready"}), 400
+
+
 
     # 상태 초기화
     pending_input = False
     pending_face_data = None
-    return jsonify({"message": f"Face saved for {user_name}"}), 200
+    analysis_results = None 
+    return jsonify({"message": f"Face saved for {new_user_name}"}), 200
 
 
 @app.route('/check_face', methods=['GET'])
