@@ -6,15 +6,11 @@ services:
       context: ./src/control
       dockerfile: Dockerfile
     container_name: control_service
-    networks:
-      bridge_network:
-        ipv4_address: 172.18.0.2  # 고정 IP 주소 할당
+    network_mode: "host"  # 호스트 네트워크 사용
     volumes:
       - ./src/control:/app  # 로컬 파일과 컨테이너 파일 매핑
     environment:
       - ENV_VAR_NAME=value  # 필요한 환경 변수 추가 (예시)
-    ports:
-      - "8080:8080"  # 호스트의 8080 포트를 컨테이너의 8080 포트와 매핑
 
   face_detect:
     build:
@@ -26,46 +22,32 @@ services:
       - NVIDIA_VISIBLE_DEVICES=0  # GPU 0 사용 (첫 번째 GPU)
     devices:
       - "/dev/video0:/dev/video0"  # 웹캠 장치 매핑
-    networks:
-      bridge_network:
-        ipv4_address: 172.18.0.3  # 고정 IP 주소 할당
-    ports:
-      - "5000:5000"  # 호스트의 5000 포트를 컨테이너의 5000 포트와 매핑
+    network_mode: "host"  # 호스트 네트워크 사용
+    # ports:
+    #   - "5000:5000"  # 호스트의 5000 포트를 컨테이너의 5000 포트와 매핑
 
   gui:
     build:
       context: ./src/gui
       dockerfile: Dockerfile
     container_name: gui_service
-    networks:
-      bridge_network:
-        ipv4_address: 172.18.0.4  # 고정 IP 주소 할당
+    network_mode: "host"  # 호스트 네트워크 사용
     volumes:
       - ./src/gui:/app  # 로컬 파일과 컨테이너 파일 매핑
     environment:
       - ENV_VAR_NAME=value  # 필요한 환경 변수 추가 (예시)
-    ports:
-      - "3001:3001"  # 호스트의 3001 포트를 컨테이너의 3001 포트와 매핑
+    # ports:
+    #   - "3001:3001"  # 호스트의 3001 포트를 컨테이너의 3001 포트와 매핑
 
   db:
     build:
       context: ./src/db
       dockerfile: Dockerfile
     container_name: db_service
-    networks:
-      bridge_network:
-        ipv4_address: 172.18.0.5  # 고정 IP 주소 할당
+    network_mode: "host"  # 호스트 네트워크 사용
     volumes:
       - ./src/db:/app  # 로컬 파일과 컨테이너 파일 매핑
     environment:
       - FLASK_ENV=development
-    ports:
-      - "8000:8000"  # 호스트의 8000 포트를 컨테이너의 8000 포트와 매핑
-
-networks:
-  bridge_network:
-    driver: bridge  # 브리지 네트워크 모드
-    ipam:
-      driver: default
-      config:
-        - subnet: "172.18.0.0/16"  # IP 주소 범위 설정
+    # ports:
+    #   - "8000:8000"  # 호스트의 8000 포트를 컨테이너의 8000 포트와 매핑
