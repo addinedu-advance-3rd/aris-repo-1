@@ -70,11 +70,11 @@
 
 - ## 실행방법
   - git에서의 develop branch  
-    "feat: init_docker_compose" 기준.
+    "docs: docker_compose_명령어추가" 기준.
   ~~~
   sudo docker-compose up --build
   ~~~
-  - build 는 파일 변경이 있을때 초기 한번만 하면 됨.
+  - build 는 파일 변경이 있을때 초기 한번만 하면 됨.(이미지를 재 빌드하는 옵션)  
   
   - 각자 작성하신 코드내에서 사용하는 포트가 있을거임. 모든 container 가 host와 연결되어 있음. 즉, 
     - face_detect는 (https://0.0.0.0:5000/video)
@@ -88,23 +88,55 @@
     ~~~  
     로 전체를 다시 실행해도 됨.
   
-  - 만약 conatiner 내에서 테스트해보고싶다면 예시로 face_detect 일때.
-  src/face_detect 위치에서 
-    ~~~
-    sudo docker build . --tag test_facedetect
-    ~~~
-    = test_facedetect의 이름을 갖는 이미지를 만들어줘
-    ~~~
-    sudo docker run -it --device /dev/video0:/dev/video0 --gpus '"device=0"' --network host test_facedetect /bin/bash
-    ~~~
-    -it : /bin/bash를 실행하고 입출력 공유를 하겠다.(터미널을 열겠다)  
+  - 만약 conatiner 내에서 테스트해보고싶다면 
+    - face_detect 경우.
+    src/face_detect 위치에서 
+        ~~~
+        sudo docker build . --tag test_facedetect
+        ~~~
+        = test_facedetect의 이름을 갖는 이미지를 만들어줘
+        ~~~
+        sudo docker run -it --device /dev/video0:/dev/video0 --gpus '"device=0"' --network host test_facedetect /bin/bash
+        ~~~
+
+    -  gui 경우.  
+      src/gui 위치에서 
+        ~~~
+        sudo docker build . --tag test_gui
+        ~~~
+        = test_gui의 이름을 갖는 이미지를 만들어줘
+        ~~~
+        sudo docker run --network host -it  test_gui /bin/bash
+        ~~~
+    - control의 경우.  
+      src/control 위치에서 
+        ~~~
+        sudo docker build . --tag test_control
+        ~~~
+        = test_control의 이름을 갖는 이미지를 만들어줘
+        ~~~
+        sudo docker run --network host -it  test_control /bin/bash
+        ~~~
+
+    - db의 경우.  
+      src/db 위치에서 
+        ~~~
+        sudo docker build . --tag test_db
+        ~~~
+        = test_db의 이름을 갖는 이미지를 만들어줘
+        ~~~
+        sudo docker run --network host -it  test_control /bin/bash
+        ~~~
 
 
-    --device : /dev/video0:/dev/video0 로써 로컬의 /dev/video0 와 컨테이너 내의 /dev/video0 를 연결 하겠다.  
-    
-    --gpus : '"device=0"' 로써 0번 gpu를 사용하겠다.  
-    test_facedetect의 이미지로 
+        -it : /bin/bash를 실행하고 입출력 공유를 하겠다.(터미널을 열겠다)  
 
-    --network : host 네트워크를 사용하겠다.  
 
-    test_facedetect : 이 이미지를 사용하겠다.
+        --device : /dev/video0:/dev/video0 로써 로컬의 /dev/video0 와 컨테이너 내의 /dev/video0 를 연결 하겠다.(웹캡을 써야하는 모듈이라면 필요)  
+        
+        --gpus : '"device=0"' 로써 0번 gpu를 사용하겠다.  
+        
+
+        --network : host 네트워크를 사용하겠다.  
+
+        test_facedetect : 이 이미지를 사용하겠다.
