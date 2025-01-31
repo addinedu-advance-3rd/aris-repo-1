@@ -1,0 +1,5 @@
+train: /home/addinedu/venv/objectdetection/cup_detect/custom_data/images/train/
+val: /home/addinedu/venv/objectdetection/cup_detect/custom_data/images/val/
+
+nc: 1  # 클래스 개수 (cup만 포함하면 1)
+names: ['cup']  # 클래스 이름

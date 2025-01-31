@@ -1,0 +1,4 @@
+opencv-python-headless==4.10.0.84
+facenet-pytorch==2.6.0
+deepface==0.0.93
+tf_keras==2.18.0
