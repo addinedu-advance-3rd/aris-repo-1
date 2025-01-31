@@ -1,35 +1,54 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Welcome New Customer</title>
+  <meta charset="UTF-8">
+  <title>Enter Nickname</title>
+</head>
+<body>
+  <h1>Welcome! Enter Your Nickname</h1>
+  <form id="nicknameForm">
+    <input type="text" id="nicknameInput" placeholder="Enter your nickname" required>
+    <button type="submit">Submit</button>
+  </form>
+  <p id="statusMessage"></p>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const nicknameInput = document.getElementById('nickname');
-      const form = document.getElementById('nickname-form');
+      const form = document.getElementById('nicknameForm');
+      const nicknameInput = document.getElementById('nicknameInput');
+      const statusMessage = document.getElementById('statusMessage');
 
-      // 닉네임 입력 후 처리
-      form.addEventListener('submit', (event) => {
+      form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const nickname = nicknameInput.value.trim();
         if (nickname) {
-          localStorage.setItem('customerNickname', nickname); // 닉네임 저장
-          window.location.href = '/topping.html'; // 토핑 선택 페이지로 이동
+          try {
+            // API 요청
+            const response = await fetch('http://0.0.0.0:5000/submit_name', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ name: nickname }),
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+              localStorage.setItem('customerNickname', nickname); // 닉네임 저장
+              statusMessage.textContent = result.message;
+              window.location.href = '/topping.html'; // 토핑 선택 페이지로 이동
+            } else {
+              statusMessage.textContent = result.error || 'Error occurred.';
+            }
+          } catch (error) {
+            console.error('Error submitting nickname:', error);
+            statusMessage.textContent = 'Failed to submit. Please try again.';
+          }
+        } else {
+          statusMessage.textContent = 'Please enter a nickname.';
         }
       });
-
-      // 기존 고객 확인
-      if (localStorage.getItem('customerNickname')) {
-        window.location.href = '/topping.html'; // 기존 고객은 닉네임 입력 생략
-      }
     });
   </script>
-</head>
-<body>
-  <h1>반갑습니다! 닉네임을 입력해주세요</h1>
-  <form id="nickname-form">
-    <input type="text" id="nickname" placeholder="닉네임을 입력하세요" required />
-    <button type="submit">확인</button>
-  </form>
 </body>
 </html>
