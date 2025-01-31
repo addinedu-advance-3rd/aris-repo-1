@@ -1,0 +1,7 @@
+# Ignore specific model weight files
+src/face_detect/weights/age_model_weights.h5
+src/face_detect/weights/gender_model_weights.h5
+
+# (Optional) Ignore all .h5 files in the weights directory
+src/face_detect/weights/*.h5
+node_modules
