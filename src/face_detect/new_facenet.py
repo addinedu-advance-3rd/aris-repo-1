@@ -112,19 +112,6 @@ class FaceRecognitionSystem:
 
     def load_embeddings_from_db(self):
 
-        # print(f"save_to_db_api_url : {save_to_db_api_url}" , flush=True)
-        # try : 
-        #     response = requests.post(save_to_db_api_url, json=new_entry)
-
-        #     if response.status_code == 201:
-        #         print("User added successfully to DB!" , flush=True )
-        #     else:
-        #         print("Failed to add user to DB. Status code:", response.status_code , flush=True)
-        # except Exception as e:
-        #     print("Error saving to DB:", e , flush=True)
-
-
-
         """Load face embeddings + metadata from SQLite3 database."""
         self.reference_embeddings.clear()
         
@@ -352,7 +339,8 @@ class FaceRecognitionSystem:
                         (0, 0, 255),
                         2
                     )
-                new_face_detected = True
+                self.set_recognized_user("new")
+                self.set_user_status("new")
                 self.pending_face_data = (embedding, boxes, face_image)
         else:
             # No face
