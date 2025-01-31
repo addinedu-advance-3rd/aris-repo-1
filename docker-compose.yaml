@@ -30,13 +30,8 @@ services:
       dockerfile: Dockerfile
     container_name: face_detect_service
     restart : always
-<<<<<<< HEAD
     runtime: nvidia  # GPU 사용
     # privileged: true  # 컨테이너가 호스트 장치에 접근 가능하도록 설정
-=======
-    runtime: nvidia  # GPU 사용 (그래픽카드 없는 경우 대응 위해 주석 처리)
-    privileged: true  # 컨테이너가 호스트 장치에 접근 가능하도록 설정
->>>>>>> develop
     environment:
       - NVIDIA_VISIBLE_DEVICES=0  # GPU 0 사용 (첫 번째 GPU)
     devices:
@@ -65,12 +60,8 @@ services:
       - "0.0.0.0:3001:3001"  # 호스트의 3000 포트를 모든 인터페이스에서 접근 가능하게 매핑
     depends_on:
       - face_detect  # face_detect 서비스 의존성 추가
-<<<<<<< HEAD
     # environment:
       # - FACE_DETECT_URL=http://face_detect_service:5000/video  # 환경 변수로 URL 전달
-=======
-
->>>>>>> develop
   
   db:
     build:
@@ -86,8 +77,6 @@ services:
       - FLASK_ENV=development
     ports:
       - "8000:8000"  # 호스트의 8000 포트를 컨테이너의 8000 포트와 매핑
-<<<<<<< HEAD
-=======
 
   cup_detect:
     build:
@@ -104,4 +93,3 @@ services:
         ipv4_address: 172.18.0.6  # 고정 IP 주소 할당
     ports:
       - "6000:6000"  # 호스트의 6000 포트를 컨테이너의 6000 포트와 매핑
->>>>>>> develop
