@@ -26,6 +26,20 @@ services:
     # ports:
     #   - "5000:5000"  # 호스트의 5000 포트를 컨테이너의 5000 포트와 매핑
 
+  cup_detect:
+    build:
+      context: ./src/cup_detect
+      dockerfile: Dockerfile
+    container_name: cup_detect_service
+    runtime: nvidia  # GPU 사용
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0  # GPU 0 사용 (첫 번째 GPU)
+    devices:
+      - "/dev/video2:/dev/video2"  # 웹캠 장치 매핑
+    network_mode: "host"  # 호스트 네트워크 사용
+    # ports:
+    #   - "6000:6000"  # 호스트의 6000 포트를 컨테이너의 6000 포트와 매핑
+
   gui:
     build:
       context: ./src/gui
