@@ -9,6 +9,8 @@ import time
 import uuid
 import hashlib
 import requests
+import pickle
+import sqlite3
 from deepface import DeepFace
 import threading
 from flask import Flask, request, render_template, Response, jsonify
@@ -30,6 +32,9 @@ if torch.cuda.is_available():
 else:
     print("Using CPU")
 
+
+save_to_db_api_url  = "http://db_service:8000/users"
+
 # -----------------------------
 # Helper functions
 # -----------------------------
@@ -41,6 +46,7 @@ def generate_hashed_uuid(length=8):
 
 def calculate_distance(embedding1, embedding2):
     return np.linalg.norm(embedding1 - embedding2)
+
 
 # -----------------------------
 # FaceRecognitionSystem class
@@ -70,6 +76,7 @@ class FaceRecognitionSystem:
 
         # Load existing embeddings from JSON
         self.load_embeddings_from_folder()
+        self.load_embeddings_from_db()
 
     def load_embeddings_from_folder(self):
         """Load face embeddings + metadata from the folder's JSON file."""
@@ -99,6 +106,41 @@ class FaceRecognitionSystem:
                 self.reference_embeddings[user_id] = (name, embedding)
 
         print(f"Loaded {len(self.reference_embeddings)} reference embeddings.")
+
+
+    def load_embeddings_from_db(self):
+
+        # print(f"save_to_db_api_url : {save_to_db_api_url}" , flush=True)
+        # try : 
+        #     response = requests.post(save_to_db_api_url, json=new_entry)
+
+        #     if response.status_code == 201:
+        #         print("User added successfully to DB!" , flush=True )
+        #     else:
+        #         print("Failed to add user to DB. Status code:", response.status_code , flush=True)
+        # except Exception as e:
+        #     print("Error saving to DB:", e , flush=True)
+
+
+
+        """Load face embeddings + metadata from SQLite3 database."""
+        self.reference_embeddings.clear()
+        
+        try:
+            response = requests.get(save_to_db_api_url)
+            if response.status_code == 200:
+                data = response.json()
+                for user in data:
+                    user_id = str(user['u_id'])
+                    name = user['name']
+                    embedding = user['embedding']
+                    self.reference_embeddings[user_id] = (name, embedding)
+
+            print(f"Loaded {len(self.reference_embeddings)} reference embeddings from DB.")
+
+        except sqlite3.Error as e:
+            print(f"Database error: {str(e)}")
+
 
     def extract_embedding_and_boxes(self, image):
         """Extract face embedding and bounding boxes from given RGB image."""
@@ -216,8 +258,26 @@ class FaceRecognitionSystem:
             json.dump(metadata, f, indent=4, ensure_ascii=False)
 
         # Reload the local reference embeddings
-        self.load_embeddings_from_folder()
-        print(f"{user_name}'s embedding and analysis saved!")
+
+        # self.load_embeddings_from_folder()        # Save to DB
+        print(f"save_to_db_api_url : {save_to_db_api_url}" , flush=True)
+
+        try : 
+            response = requests.post(save_to_db_api_url, json=new_entry)
+
+            if response.status_code == 201:
+                print("User added successfully to DB!" , flush=True )
+            else:
+                print("Failed to add user to DB. Status code:", response.status_code , flush=True)
+        except Exception as e:
+            print("Error saving to DB:", e , flush=True)
+
+        print(f"{user_name}'s embedding and analysis saved!", flush=True)
+
+        print("load_embeddings_from_db",flush=True)
+        # 데이터베이스에서 embedding 로드
+        self.load_embeddings_from_db()
+
 
     def process_frame(self, frame):
         """

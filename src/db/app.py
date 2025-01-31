@@ -14,6 +14,7 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def init_db():
     with app.app_context():
         db = get_db()
@@ -106,6 +107,8 @@ def delete_user(u_id):
     if cursor.rowcount == 0:
         return jsonify({"error": "User not found"}), 404
     return jsonify({"message": "User deleted successfully!"})
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8000)
