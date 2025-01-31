@@ -21,7 +21,7 @@ from threading import Lock
 # Flask setup
 # -----------------------------
 app = Flask(__name__)
-CORS(app)  # Allow CORS for all domains
+CORS(app, supports_credentials=True)
 
 # -----------------------------
 # Device check
@@ -70,6 +70,8 @@ class FaceRecognitionSystem:
         
         # Face detection
         self.face_detected = False
+        self.recognized_user = None
+        self.user_status = "Unknown"
         self.pending_input = False
         self.pending_face_data = None
         self.new_user_name = None
@@ -202,10 +204,21 @@ class FaceRecognitionSystem:
     def set_face_detected(self, value: bool):
         with self.lock:
             self.face_detected = value
-
     def get_face_detected(self) -> bool:
         with self.lock:
-            return self.face_detected
+            return self.face_detected        
+    def set_user_status(self, value: str):
+        with self.lock:
+            self.user_status = value
+    def get_user_status(self) -> str:
+        with self.lock:
+            return self.user_status
+    def set_recognized_user(self, value: str):
+        with self.lock:
+            self.recognized_user = value
+    def get_recognized_user(self) -> str:
+        with self.lock:
+            return self.recognized_user
 
     def save_new_face_and_embedding(self, embedding, face_image, user_name):
         """
@@ -290,7 +303,6 @@ class FaceRecognitionSystem:
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         embedding, boxes, face_image = self.extract_embedding_and_boxes(frame_rgb)
         
-        recognized_user = None
         new_face_detected = False
 
         if embedding is not None:
@@ -308,8 +320,8 @@ class FaceRecognitionSystem:
 
             if best_match != "No Match":
                 matched_name = self.reference_embeddings[best_match][0]
-                recognized_user = matched_name
-
+                self.set_recognized_user(matched_name)
+                self.set_user_status("Recognized")
                 # Draw bounding box
                 if boxes:
                     x1, y1, x2, y2 = [int(b) for b in boxes[0]]
@@ -346,7 +358,7 @@ class FaceRecognitionSystem:
             # No face
             self.set_face_detected(False)
 
-        return frame, recognized_user, new_face_detected
+        return frame, self.get_recognized_user(), new_face_detected
 
 # -----------------------------
 # Create a single system instance
@@ -368,10 +380,10 @@ def stream_video():
     if not cap.isOpened():
         print("Failed to open webcam.")
         return  # Or yield nothing
+    
+    recognized_time = None  # ✅ 변수 초기화 추가
 
     # simple timing for recognized user
-    recognized_user = None
-    recognized_time = None
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -382,19 +394,21 @@ def stream_video():
         
         # If recognized
         if user_name is not None:
-            if recognized_user is None:
-                recognized_user = user_name
+            if face_system.get_recognized_user() is None:
+                face_system.set_recognized_user(user_name)
+                face_system.set_user_status("Recognized")
                 recognized_time = time.time()
-                print(f"Welcome, {recognized_user}. 3 seconds to exit...")
+                print(f"Welcome, {user_name}. 3 seconds to exit...", flush=True)
 
             # After 3 seconds, break
-            if recognized_user == user_name and (time.time() - recognized_time) > 3:
-                print(f"Goodbye, {recognized_user}. Exiting stream...")
+            if face_system.get_recognized_user() == user_name and recognized_time is not None and (time.time() - recognized_time) > 3:
+                print(f"Goodbye, {user_name}. Exiting stream...", flush=True)
                 break
 
         else:
             # reset recognized user if no match
-            recognized_user = None
+            face_system.set_recognized_user(None)
+            face_system.set_user_status("Unknown")
 
         # If new face is detected, could do additional logic or let user input name from the front-end
         # This is the place to set face_system.pending_input = True if you want to enforce it in code
@@ -440,6 +454,17 @@ def submit_name():
 @app.route('/check_face', methods=['GET'])
 def check_face():
     return jsonify({"face_detected": face_system.get_face_detected()})
+
+
+@app.route('/check_user', methods=['GET', 'OPTIONS'])
+def check_user():
+    if request.method == "OPTIONS":
+        return '', 204  # ✅ OPTIONS 요청에 대한 응답 추가
+
+
+    return jsonify({"user_status": face_system.get_user_status(), "recognized_user": face_system.get_recognized_user()})
+
+
 
 if __name__ == '__main__':
     # Note: threaded=True can help with concurrency on dev server, but not recommended for production
