@@ -1,17 +1,41 @@
 import os
 import sys
 import time
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})  # This will automatically add the header "Access-Control-Allow-Origin: *" to every response
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 
 from xarm.wrapper import XArmAPI
 
 class A_Circle_Arm():
-    def __init__(self, arm_ip):
-        self.arm = XArmAPI(arm_ip)
-        self.arm.motion_enable(enable=True)
-        self.arm.set_mode(0)
-        self.arm.set_state(state=0) # state : 0: sport state, 3: pause state, 4: stop state
+    def __init__(self, arm_ip, app):
+        self.arm_ip = arm_ip
+        self.arm = None  # Initialize as None
+        self.connect_to_arm()
+        # self.arm = XArmAPI(arm_ip)
+        self.app = app
+        # Define a route for the select_toppings method
+        self.app.add_url_rule(
+            '/select_toppings',
+            view_func=self.select_toppings,
+            methods=['POST', 'OPTIONS']
+        )
+
+        if self.arm:
+            try:
+                self.arm.motion_enable(enable=True)
+                self.arm.set_mode(0)
+                self.arm.set_state(state=0)  # 0: sport state, 3: pause state, 4: stop state
+                print("[SUCCESS] Arm initialized successfully.")
+            except Exception as e:
+                print(f"[ERROR] Failed to initialize arm: {e}")
+        else:
+            print("[WARNING] Arm is not connected. Skipping motion setup.")
+
         self.speed = 200
         self.mvacc = 100
         self.poses = [[-292.814117, -127.788345, 210.566269, 122.390603, -90.000000, -38.036663],  # 0
@@ -142,6 +166,28 @@ class A_Circle_Arm():
         컵 집고 -> 프레스아래 -> 토핑쪽으로 회전 안됨.
         아이스크림 받고. 바로 컵쪽으로 안됨.(무조건 토핑쪽 방향 이용)
         """
+    def connect_to_arm(self, max_retries=5, retry_delay=1):
+        """ Try connecting to the robotic arm with retry logic. """
+        attempt = 0
+        while attempt < max_retries:
+            try:
+                print(f"[INFO] Attempting to connect to XArm at {self.arm_ip} (Attempt {attempt + 1}/{max_retries})")
+                self.arm = XArmAPI(self.arm_ip)
+                
+                if self.arm.connected:
+                    print(f"[SUCCESS] Connected to XArm at {self.arm_ip}")
+                    return
+                else:
+                    print(f"[WARNING] Connection established, but arm is not fully functional.")
+
+            except Exception as e:
+                print(f"[ERROR] Failed to connect to XArm at {self.arm_ip}: {e}")
+
+            attempt += 1
+            time.sleep(retry_delay)
+        print(f"[CRITICAL] Unable to connect to XArm at {self.arm_ip} after {max_retries} attempts. Proceeding without arm control.")
+
+
     def _return_to_default(self):
         joint_angles = [-179.7, 3.6, 33.5, -0.9, -60.1, 0.4]  # 예제: self.poses[17]에 맞게 수정 필요
         for i, angle in enumerate(joint_angles, start=1):
@@ -209,18 +255,47 @@ class A_Circle_Arm():
         if cur_6_motor_angle[1] > 0:
             angle = -angle
         self.arm.set_servo_angle(servo_id=6, angle=angle, speed=self.speed, mvacc=self.mvacc, relative=True, wait=True)
-    
+
     def select_toppings(self):
-        print("토핑을 선택하세요 (예: 1 2 3)")
-        selections = input().split()
-        return (
-            '1' in selections,
-            '2' in selections,
-            '3' in selections
-        )
-    
-    def run(self):
-        topping_1_selected, topping_2_selected, topping_3_selected = self.select_toppings()
+        """ Flask route handler: receives topping data & moves the robot """
+        if request.method == "OPTIONS":
+            # Return an empty response with 200 OK status.
+            return ('', 200)
+
+        data = request.get_json()  # ✅ Use .get_json() to avoid errors
+        if not data:
+            return self.create_response({"error": "No data received"}, 400)
+            print("[INFO] Received data:",aol==p)
+
+        toppings = data.get('toppings', [])
+        print("[INFO] Received Toppings:", toppings)
+
+        # ✅ Only process movement if the arm is connected
+        if self.arm:
+            self.run(toppings)
+        else:
+            print("[WARNING] Robot arm is not connected. Skipping movement.")
+
+        return jsonify({
+            "message": "Toppings received and processed",
+            "received_toppings": toppings
+        }), 200
+
+
+    def create_response(self, data, status=200):
+        """ ✅ Ensure all responses contain CORS headers """
+        response = jsonify(data)
+        response.status_code = status
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        return response
+
+
+
+    def run(self, toppings):
+        topping_1_selected, topping_2_selected, topping_3_selected = toppings["received_toppings"]
+
         
         # 토핑 선택과 관련된 초기 설정
         self._init_6th_motor()  # 6번째 모터 초기화
@@ -297,8 +372,12 @@ class A_Circle_Arm():
         time.sleep(3)
         self.arm.set_cgpio_analog(0, 0)
         time.sleep(3)
-    
-if __name__ == "__main__":
-    my_arm = A_Circle_Arm("192.168.1.182")
-    my_arm.run()
 
+
+
+if __name__ == "__main__":
+
+    my_arm = A_Circle_Arm("192.168.1.182", app)
+
+    # Run Flask server
+    app.run(host='0.0.0.0', port=8080)
