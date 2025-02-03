@@ -294,7 +294,10 @@ class A_Circle_Arm():
 
 
     def run(self, toppings):
-        topping_1_selected, topping_2_selected, topping_3_selected = toppings["received_toppings"]
+        topping_1_selected = toppings[0]
+        topping_2_selected = toppings[1]
+        topping_3_selected = toppings[2]
+
 
         
         # 토핑 선택과 관련된 초기 설정
