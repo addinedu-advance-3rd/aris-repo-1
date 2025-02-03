@@ -116,24 +116,29 @@ class A_Circle_Arm():
         self.routes = {"default_to_ice_1": [17, 22, 0],
                        "default_to_ice_2": [17, 25, 1],
                        "default_to_ice_3": [17, 27, 2],
-                       "ice_1_to_in_press": [0, 23, 15, 5, 4, 3],
+                       "ice_1_to_in_press": [0, 23, 15, 5, 4, 3], # 최적화 필요
                        "ice_2_to_in_press": [1, 26, 5 ,4, 3],
                        "ice_3_to_in_press": [2, 28, 5, 4, 3],
-                       "in_press_to_cup": [3, 24, 4, 5, 18, 8, 6],
+                       "in_press_to_cup": [3, 24, 4, 5, 18, 8, 6], # 최적화 필요
                        "cup_to_up_cup" : [6, 8],
-                       "up_cup_to_topping_1": [9, 10, 19, 11],  # 10에서 11가면서 컵 방향 회전.
-                       "topping_1_to_topping_2": [11, 19, 12],
-                       "topping_2_to_topping_3": [12, 20, 13],
-                       "toping_3_to_under_press": [13, 21, 7],
-                       "under_press_to_person": [7, 21, 19, 14, 16], # 14는 디폴트 정해서수정필요
+                       "up_cup_to_topping_zone": [9, 10, 19],  #없애고, joint control로 대체? 
+                       "topping_1": [19, 11],
+                       "after_topping_1": [19],
+                       "topping_2": [20, 12],
+                       "after_topping_2": [20],
+                       "topping_3": [21, 13],
+                       "after_topping_3": [21],
+                       "topping_to_under_press": [21, 7],
+                       "under_press_to_person": [7, 21, 19, 14, 16],
                        "put_on_ice_1": [16, 41, 32, 33],
                        "put_on_ice_2": [16, 41, 35, 36],
                        "put_on_ice_3": [16, 41, 38, 39],
-                       "ice_1_to_in_press_retrieve": [33, 34, 41, 43, 44, 45],
-                       "ice_2_to_in_press_retrieve": [36, 37, 41, 15, 5, 4, 24],
-                       "ice_3_to_in_press_retrieve": [39, 40, 41, 15, 5, 4, 24],
+                       "ice_1_to_press_retrieve": [33, 34, 41, 43, 44, 45],
+                       "ice_2_to_press_retrieve": [36, 37, 41, 15, 5, 4, 24],
+                       "ice_3_to_press_retrieve": [39, 40, 41, 15, 5, 4, 24],
+                       "person_to_press_retrieve": [16, 43, 44, 45],
                        "press_to_waste": [45, 31, 30, 29],
-                       "return_to_default": [29, 30, 44, 43, 46, 47, 17], # 14에서 디폴트로 추가 필요.
+                       "return_to_default": [29, 30, 44, 43, 46, 47, 17], 
                        "return_to_default_direct": [46, 47, 17],
                        "just_give": [16],
                        }
@@ -141,13 +146,10 @@ class A_Circle_Arm():
         컵 집고 -> 프레스아래 -> 토핑쪽으로 회전 안됨.
         아이스크림 받고. 바로 컵쪽으로 안됨.(무조건 토핑쪽 방향 이용)
         """
-    def move_a_point(self, num):
-        if num == 17:  # 디폴트 위치만 Joint Control 사용
-            joint_angles = [-179.7, 3.6, 33.5, -0.9, -60.1, 0.4]  # 예제: self.poses[17]에 맞게 수정 필요
-            for i, angle in enumerate(joint_angles, start=1):
-                self.arm.set_servo_angle(servo_id=i, angle=angle, speed=self.speed, mvacc=self.mvacc, wait=True)
-        else:
-            self.arm.set_position(*self.poses[num], speed=self.speed, mvacc=self.mvacc, wait=True)
+    def _return_to_default(self):
+        joint_angles = [-179.7, 3.6, 33.5, -0.9, -60.1, 0.4]  # 예제: self.poses[17]에 맞게 수정 필요
+        for i, angle in enumerate(joint_angles, start=1):
+            self.arm.set_servo_angle(servo_id=i, angle=angle, speed=self.speed, mvacc=self.mvacc, wait=True)
 
     def _init_6th_motor(self):
         self.arm.set_servo_angle(servo_id=6, angle=0, speed=self.speed, mvacc=self.mvacc, relative=False, wait=True)
@@ -212,57 +214,36 @@ class A_Circle_Arm():
             angle = -angle
         self.arm.set_servo_angle(servo_id=6, angle=angle, speed=self.speed, mvacc=self.mvacc, relative=True, wait=True)
     
+    def select_toppings(self):
+        while True:
+            print("토핑을 선택하세요 (예: 123) \n만약 아무것도 추가하지 않으려면, Enter를 눌러주세요.")
+            selections = input().replace(" ", "")
+            
+            if not selections:
+                print("토핑을 선택하지 않으셨습니다.")
+                return (False, False, False)
+            
+            if any(c not in '123' for c in selections):
+                print("다시 선택해주세요.\n")
+                continue
+            
+            for topping in ['1', '2', '3']:
+                if topping in selections:
+                    print(f"{topping}번 토핑을 선택하셨습니다.")
+            
+            return (
+                '1' in selections,
+                '2' in selections,
+                '3' in selections
+            )
 
-# # 3️⃣ 선택된 토핑 활성화 및 비활성화
-#     def operate_topping_machine(selected_toppings, selected_pins):
-#         while True:
-#             try:
-#                 num_toppings = int(input("원하는 토핑 개수를 입력하세요 (1~3): "))
-#                 if 1 <= num_toppings <= 3:
-#                     break
-#                 else:
-#                     print("1에서 3 사이의 숫자를 입력하세요.")
-#             except ValueError:
-#                 print("숫자를 입력하세요.")
-
-#         # 토핑을 위한 GPIO 핀 번호 설정 (예: 0, 1, 2번 핀 사용)
-#         available_toppings = [0, 1, 2]  # 사용할 GPIO 핀 리스트
-
-#         # 사용자가 원하는 순서대로 토핑 번호 입력 받기
-#         selected_toppings = []
-#         print(f"원하는 토핑 개수: {num_toppings}")
-#         for i in range(num_toppings):
-#             while True:
-#                 try:
-#                     topping = int(input(f"선택할 {i+1}번째 토핑 번호를 입력하세요 (0, 1, 2): "))
-#                     if topping in available_toppings:
-#                         selected_toppings.append(topping)
-#                         break
-#                     else:
-#                         print("유효한 번호를 입력하세요 (0, 1, 2).")
-#                 except ValueError:
-#                     print("숫자를 입력하세요.")
-
-#         print(f"활성화할 GPIO 핀: {selected_toppings}")
-
-#         # 선택된 토핑 순차적으로 활성화
-#         value = 1
-#         for pin in selected_toppings:
-#             arm.set_cgpio_digital(pin, value)
-#             print(f'set_cgpio_digital({pin}, {value})')
-#             time.sleep(10)  # 각 토핑이 나오는 시간 10초 간격
-
-#         # 모든 토핑 비활성화
-#         value = 0
-#         for pin in selected_toppings:
-#             arm.set_cgpio_digital(pin, value)
-#             print(f'set_cgpio_digital({pin}, {value})')
-#             time.sleep(0.5)
     
-    
-    def run(self, topping_1_selected=False, topping_2_selected=False, topping_3_selected=False):
-    # 토핑 선택과 관련된 초기 설정
+    def run(self):
+        topping_1, topping_2, topping_3 = self.select_toppings()
+        
+        # 토핑 선택과 관련된 초기 설정
         self._init_6th_motor()  # 6번째 모터 초기화
+        self._return_to_default()
         self._grap(False)  # 그랩 초기화
         self._move_one_path("default_to_ice_1", pitch_maintain=False)  # 기본 경로로 이동
         self._grap(True)  # 아이스크림 그랩
@@ -274,42 +255,142 @@ class A_Circle_Arm():
         self._turn_cup(180)  # 컵 회전
         self._grap(False)  # 그랩 해제
         time.sleep(1)  # 1초 대기
-        self._move_one_path("up_cup_to_topping_1")
-        time.sleep(5)
-        self.arm.set_cgpio_digital(0,1)
-        time.sleep(5)
-        self.arm.set_cgpio_digital(0,0)
-        self._move_one_path("topping_1_to_topping_2")
-        self.arm.set_cgpio_digital(1,1)
-        time.sleep(5)
-        self.arm.set_cgpio_digital(1,0)
-        self._move_one_path("toping_2_to_topping_3")
-        self.arm.set_cgpio_digital(2,1)
-        time.sleep(5)
-        self.arm.set_cgpio_digital(2,0)  
+        self._move_one_path("up_cup_to_topping_zone")
+
+        # 선택된 토핑에 따라 동작 수행
+       
+        if topping_1 and topping_2 and topping_3:
+            self._move_one_path("topping_1")
+            time.sleep(2)
+            self.arm.set_cgpio_digital(0,1)
+            time.sleep(5)
+            self.arm.set_cgpio_digital(0,0)
+            time.sleep(1)
+            self._move_one_path("after_topping_1")
+            self._move_one_path("topping_2")
+            time.sleep(2)
+            self.arm.set_cgpio_digital(1,1)
+            time.sleep(5)
+            self.arm.set_cgpio_digital(1,0)
+            time.sleep(1)
+            self._move_one_path("after_topping_2")
+            self._move_one_path("topping_3")
+            time.sleep(2)
+            self.arm.set_cgpio_digital(2,1)
+            time.sleep(5)
+            self.arm.set_cgpio_digital(2,0)
+            time.sleep(1)
+            self._move_one_path("after_topping_3")
+
+        elif topping_1 and topping_2:
+            self._move_one_path("topping_1")
+            time.sleep(2)
+            self.arm.set_cgpio_digital(0,1)
+            time.sleep(5)
+            self.arm.set_cgpio_digital(0,0)
+            time.sleep(1)
+            self._move_one_path("after_topping_1")
+            self._move_one_path("topping_2")
+            time.sleep(2)
+            self.arm.set_cgpio_digital(1,1)
+            time.sleep(5)
+            self.arm.set_cgpio_digital(1,0)
+            time.sleep(1)
+            self._move_one_path("after_topping_2")
+
+        elif topping_1 and topping_3:
+            self._move_one_path("topping_1")
+            time.sleep(2)
+            self.arm.set_cgpio_digital(0,1)
+            time.sleep(5)
+            self.arm.set_cgpio_digital(0,0)
+            time.sleep(1)
+            self._move_one_path("after_topping_1")
+            self._move_one_path("topping_3")
+            time.sleep(2)
+            self.arm.set_cgpio_digital(2,1)
+            time.sleep(5)
+            self.arm.set_cgpio_digital(2,0)
+            time.sleep(1)
+            self._move_one_path("after_topping_3")
+        
+        elif topping_2 and topping_3:
+            self._move_one_path("topping_2")
+            time.sleep(2)
+            self.arm.set_cgpio_digital(1,1)
+            time.sleep(5)
+            self.arm.set_cgpio_digital(1,0)
+            time.sleep(1)
+            self._move_one_path("after_topping_2")
+            self._move_one_path("topping_3")
+            time.sleep(2)
+            self.arm.set_cgpio_digital(2,1)
+            time.sleep(5)
+            self.arm.set_cgpio_digital(2,0)
+            time.sleep(1)
+            self._move_one_path("after_topping_3")
+
+        elif topping_1:
+            self._move_one_path("topping_1")
+            time.sleep(2)
+            self.arm.set_cgpio_digital(0,1)
+            time.sleep(5)
+            self.arm.set_cgpio_digital(0,0)
+            time.sleep(1)
+            self._move_one_path("after_topping_1")
+
+        elif topping_2:
+            self._move_one_path("topping_2")
+            time.sleep(2)
+            self.arm.set_cgpio_digital(1,1)
+            time.sleep(5)
+            self.arm.set_cgpio_digital(1,0)
+            time.sleep(1)
+            self._move_one_path("after_topping_2")
+        
+        elif topping_3:
+            self._move_one_path("topping_3")
+            time.sleep(2)
+            self.arm.set_cgpio_digital(2,1)
+            time.sleep(5)
+            self.arm.set_cgpio_digital(2,0)
+            time.sleep(1)
+            self._move_one_path("after_topping_3")
+        
+        else:
+            self._move_one_path("after_topping_3")
+            
+        
         # 모든 토핑이 완료되었으면, 후속 동작 실행
-        self._move_one_path("toping_3_to_under_press")  # 후속 동작 이동
+        self._move_one_path("topping_to_under_press")  # 후속 동작 이동
         self.arm.set_cgpio_digital(3,1)
         time.sleep(12)
         self.arm.set_cgpio_digital(3,0)
         self._move_one_path("under_press_to_person")  # 사람에게 전달
         time.sleep(5)  # 잠시 대기
         self._move_one_path("just_give")  # 아이스크림 전달
-        self._move_one_path("put_on_ice_1")  # 아이스크림 위치에 올리기
-        self._move_one_path("ice_1_to_in_press_retrieve")  # 프레스 리트리브
+
+        if True:   # 아이스크림을 가져갔다면
+            self._move_one_path("person_to_press_retrieve") # 바로 프레스로 이동
+
+        else:      # 아이스크림을 안 가져갔다면
+            self._move_one_path("put_on_ice_1")  # 아이스크림 위치에 올리기
+            self._move_one_path("ice_1_to_press_retrieve")  # 그 후 프레스로 이동
+        
         self._grap(True)  # 다시 그랩
-        self._move_one_path("press_to_waste")  # 폐기물로 이동
+        self._move_one_path("press_to_waste")  # 아이스크림 버리는 위치로
         self._turn_cup(-180)  # 컵 회전
         self._grap(False)  # 그랩 해제
-        time.sleep(3)  # 3초 대기
-        self._move_one_path("return_to_default")  # 기본 위치로 돌아가기
-        self.arm.set_cgpio_analog(0, 5)
+        """time.sleep(3)  # 3초 대기"""
+        self._return_to_default() # 기본 위치로 돌아가기
+        """self._move_one_path("return_to_default")"""
+        """self.arm.set_cgpio_analog(0, 5)
         time.sleep(3)
         self.arm.set_cgpio_analog(1, 5)
         time.sleep(3)
         self.arm.set_cgpio_analog(0, 0)
-        time.sleep(3)
-        
+        time.sleep(3)"""
+    
 if __name__ == "__main__":
     my_arm = A_Circle_Arm("192.168.1.182")
     my_arm.run()
