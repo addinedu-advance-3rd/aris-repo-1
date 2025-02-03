@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Select Toppings</title>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const nicknameDisplay = document.getElementById('nickname-display');
+      const form = document.getElementById('topping-form');
+
+      // 닉네임 가져오기
+      const nickname = localStorage.getItem('customerNickname');
+      if (nickname) {
+        nicknameDisplay.textContent = `@${nickname} 님 반가워요!`;
+      } else {
+        nicknameDisplay.textContent = '고객님 반가워요!';
+      }
+
+      // 주문 처리
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        // 선택된 토핑 확인
+        const selectedToppings = Array.from(
+          document.querySelectorAll('input[name="topping"]:checked')
+        ).map((checkbox) => checkbox.value);
+
+        console.log('Selected Toppings:', selectedToppings);
+
+        // 주문 완료 후 다음 페이지로 이동
+        alert('주문이 완료되었습니다!');
+        window.location.href = '/memory.html'; // Webcam Video Recorder 페이지로 이동
+      });
+    });
+  </script>
+</head>
+<body>
+  <h1>Select Your Toppings</h1>
+
+  <!-- 닉네임 표시 -->
+  <p id="nickname-display"></p>
+
+  <!-- 토핑 선택 폼 -->
+  <form id="topping-form">
+    <label><input type="checkbox" name="topping" value="Chocolate"> Chocolate</label><br>
+    <label><input type="checkbox" name="topping" value="Sprinkles"> Sprinkles</label><br>
+    <label><input type="checkbox" name="topping" value="Strawberries"> Strawberries</label><br>
+    <button type="submit">Order Now</button>
+  </form>
+</body>
+</html>

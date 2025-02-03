@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Play Captured Video</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <style>
+    /* 기본 스타일 */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-color: #f4f4f9;
+      color: #333;
+    }
+
+    h1 {
+      margin-top: 20px;
+      font-size: 2em;
+      color: #444;
+    }
+
+    /* 비디오 스타일 */
+    #captured-video {
+      margin: 20px 0;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* QR 코드 스타일 */
+    #qr-code {
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    #qr-code img {
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      padding: 8px;
+      background-color: #fff;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 힌트 메시지 */
+    #hint {
+      font-size: 2.5em;
+      color: #777;
+      margin-bottom: 20px;
+    }
+
+    /* 버튼 스타일 */
+    button {
+      padding: 12px 20px;
+      font-size: 1em;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    #share-button {
+      background-color: #007bff;
+      color: white;
+      display: none; /* 기본적으로 숨김 */
+    }
+
+    #share-button.mobile {
+      display: block;
+      padding: 40px 80px;
+      font-size: 2em;
+    }
+
+    #share-button:hover {
+      background-color: #0056b3;
+    }
+
+    #back {
+      background-color: #6c757d;
+      color: white;
+      margin-top: 10px;
+    }
+
+    #back.mobile {
+      background-color: #6c757d;
+      color: white;
+      padding: 40px 80px;
+      font-size: 2em;
+    }
+
+
+    #back:hover {
+      background-color: #5a6268;
+    }
+  </style>
+</head>
+<body>
+  <h1>Play Captured Video</h1>
+
+  <!-- 비디오 -->
+  <video id="captured-video" width="640" height="480" controls autoplay></video>
+
+  <!-- QR 코드 -->
+  <div id="qr-code"></div>
+
+  <!-- 힌트 메시지 -->
+  <p id="hint"></p>
+
+  <!-- 공유 버튼 -->
+  <button id="share-button">Share Video</button>
+
+  <!-- 돌아가기 버튼 -->
+  <button id="back">돌아가기</button>
+
+  <script type="module" src="play.js"></script>
+</body>
+</html>
