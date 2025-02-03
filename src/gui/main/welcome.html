@@ -26,6 +26,7 @@
             // API 요청
             const response = await fetch('http://0.0.0.0:5000/submit_name', {
               method: 'POST',
+              mode: 'cors',
               headers: {
                 'Content-Type': 'application/json',
               },
