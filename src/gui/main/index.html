@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userStatus === "new") {
           setTimeout(() => { window.location.href = '/welcome.html'; }, 1000);
         } else if (userStatus === "Recognized") {
+          localStorage.setItem('customerNickname', recognizedUser); // 닉네임 저장
           setTimeout(() => { window.location.href = '/topping.html'; }, 1000);
         }
       } else {
