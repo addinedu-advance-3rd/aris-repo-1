@@ -6,6 +6,7 @@ const startButton = document.getElementById('start');
 const status = document.getElementById('status');
 const DEFAULT_DEVICE_ID = 'df6365325f98bec2c16cd8b29720f176dd751c397cbf5c379d4578f4530de3a0';
 const FALLBACK_DEVICE_ID = '3a44ff7781f8098b3d253d6d6660407fa39dface2eeb2b6f778e01d86140147d';
+import { NGROK_BASE_URL } from './config.js';
 
 async function initializeWebcam() {
   try {
@@ -78,7 +79,7 @@ function uploadVideo(blob) {
   const formData = new FormData();
   formData.append('video', blob, 'recorded_video.webm');
 
-  fetch('http://localhost:3001/upload', {
+  fetch(`${NGROK_BASE_URL}/gui/upload`, {
     method: 'POST',
     body: formData
   })
@@ -86,7 +87,7 @@ function uploadVideo(blob) {
     .then(data => {
       console.log("Video uploaded successfully:", data.url);
       // 업로드 후 play.html로 리디렉션
-      window.location.href = `/play.html?video=${encodeURIComponent(data.url)}`;
+      window.location.href = `/gui/play.html?video=${encodeURIComponent(data.url)}`;
     })
     .catch(error => {
       console.error("Upload failed:", error);

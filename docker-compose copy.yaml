@@ -1,35 +1,28 @@
 version: '3.8'
 
-services:
-  nginx-proxy:
-    image: nginx:latest
-    container_name: nginx-proxy
-    ports:
-      - "80:80"         # 호스트의 80 -> 컨테이너의 80
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - face_detect
-      - control
-      - gui
-      - db
-      - cup_detect
-    networks:
-      - mynet
+networks:
+  bridge_network:
+    driver: bridge  # 브리지 네트워크 모드
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.18.0.0/16"  # IP 주소 범위 설정
 
+services:
   control:
     build:
       context: ./src/control
       dockerfile: Dockerfile
     container_name: control_service
-    environment:
-      - ENV_VAR_NAME=value  # 필요한 환경 변수 추가 (예시)
-    expose:
-      - "8080"
+    networks:
+      bridge_network:
+        ipv4_address: 172.18.0.2  # 고정 IP 주소 할당
     volumes:
       - ./src/control:/app  # 로컬 파일과 컨테이너 파일 매핑
-    networks:
-        - mynet
+    environment:
+      - ENV_VAR_NAME=value  # 필요한 환경 변수 추가 (예시)
+    ports:
+      - "8080:8080"  # 호스트의 8080 포트를 모든 인터페이스에서 접근 가능하게 매핑
 
   face_detect:
     build:
@@ -38,49 +31,53 @@ services:
     container_name: face_detect_service
     restart : always
     runtime: nvidia  # GPU 사용
-    # privileged: true  # 컨테이너가 호스트 
+    # privileged: true  # 컨테이너가 호스트 장치에 접근 가능하도록 설정
     environment:
       - NVIDIA_VISIBLE_DEVICES=0  # GPU 0 사용 (첫 번째 GPU)
     devices:
       - "/dev/video0:/dev/video0"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
+    networks:
+      bridge_network:
+        ipv4_address: 172.18.0.3  # 고정 IP 주소 할당
     volumes:
       - ./src/face_detect:/app  # 로컬 파일과 컨테이너 파일 매핑
-    expose:
-      - "5000"
-    networks:
-        - mynet
-
+    ports:
+      - "5000:5000"  # 호스트의 5000 포트를 모든 인터페이스에서 접근 가능하게 매핑
 
   gui:
     build:
       context: ./src/gui
       dockerfile: Dockerfile
     container_name: gui_service
+    networks:
+      bridge_network:
+        ipv4_address: 172.18.0.4  # 고정 IP 주소 할당
     volumes:
       - ./src/gui:/app  # 로컬 파일과 컨테이너 파일 매핑
     environment:
       - ENV_VAR_NAME=value  # 필요한 환경 변수 추가 (예시)
+    ports:
+      - "0.0.0.0:3001:3001"  # 호스트의 3000 포트를 모든 인터페이스에서 접근 가능하게 매핑
     depends_on:
       - face_detect  # face_detect 서비스 의존성 추가
-    expose:
-      - "3001"
-    networks:
-        - mynet
+    # environment:
+      # - FACE_DETECT_URL=http://face_detect_service:5000/video  # 환경 변수로 URL 전달
   
   db:
     build:
       context: ./src/db
       dockerfile: Dockerfile
     container_name: db_service
+    networks:
+      bridge_network:
+          ipv4_address: 172.18.0.5  # 고정 IP 주소 할당
     volumes:
       - ./src/db:/app  # 로컬 파일과 컨테이너 파일 매핑
     environment:
       - FLASK_ENV=development
-    expose:
-      - "8000"
-    networks:
-        - mynet
-    
+    ports:
+      - "8000:8000"  # 호스트의 8000 포트를 컨테이너의 8000 포트와 매핑
+
   cup_detect:
     build:
       context: ./src/cup_detect
@@ -89,13 +86,10 @@ services:
     runtime: nvidia  # GPU 사용 (그래픽카드 없는 경우 대응 위해 주석 처리)
     environment:
       - NVIDIA_VISIBLE_DEVICES=0  # GPU 0 사용 (첫 번째 GPU)
-    expose:
-      - "6000"
-    networks:
-        - mynet
-
     # devices:
       # - "/dev/video2:/dev/video2"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
-networks:
-  mynet : 
-    driver: bridge
+    networks:
+      bridge_network:
+        ipv4_address: 172.18.0.6  # 고정 IP 주소 할당
+    ports:
+      - "6000:6000"  # 호스트의 6000 포트를 컨테이너의 6000 포트와 매핑
