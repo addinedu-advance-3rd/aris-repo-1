@@ -404,6 +404,9 @@ class A_Circle_Arm():
         # 모든 토핑이 완료되었으면, 후속 동작 실행
         self._move_one_path("topping_to_under_press")  # 후속 동작 이동
         self.arm.set_cgpio_digital(3,1)
+        success = self.arm.set_cgpio_digital(3,1)
+        print("CGPIO 설정 결과:", success)
+        time.sleep(12)
         time.sleep(12)
         self.arm.set_cgpio_digital(3,0)
         self._move_one_path("under_press_to_person")  # 사람에게 전달
