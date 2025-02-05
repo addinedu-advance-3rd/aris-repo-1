@@ -3,86 +3,109 @@
 <head>
   <meta charset="utf-8">
   <title>Webcam Video Recorder</title>
+
   <style>
-    /* 기본 스타일 */
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+      color: #333;
+    }
+  
+    /* 배경 아이스크림 애니메이션 컨테이너 */
+    .bg-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: -1; /* 다른 콘텐츠 뒤에 위치 */
+      background: transparent;
+    }
+    .item {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      /* background: #4169e1; */
+      animation: diagonal-move-anim 10s linear infinite alternate;
+    }
+    @keyframes diagonal-move-anim {
+      0% {
+        transform: translate(0, 0);
+      }
+      100% {
+        transform: translate(150px, 150px);
+      }
+    }
+  
+    /* 콘텐츠용 컨테이너 (랜딩, 메인 페이지) */
+    .content-container {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
-      background-color: #f4f4f9;
-      color: #333;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      min-height: 100vh;
     }
-
-    h1 {
-      margin-top: 20px;
-      font-size: 2em;
-      color: #444;
+    .hidden {
+      display: none;
     }
-
-    /* 비디오 스타일 */
-    #video {
-      margin: 20px 0;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    /* 상태 메시지 */
-    #status {
-      font-size: 1.2em;
-      margin: 10px 0;
-      color: #777;
-    }
-
-    /* 버튼 스타일 */
     button {
-      padding: 12px 20px;
-      font-size: 1em;
-      background-color: #007bff;
+      padding: 15px 30px;
+      font-size: 1.2em;
+      background-color: #ff6f61;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
       transition: background-color 0.3s ease;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      margin-top: 20px;
     }
-
     button:hover {
-      background-color: #0056b3;
+      background-color: #ff3b2e;
     }
-
-    button:active {
-      transform: scale(0.98);
+    .main-content {
+      animation: fadeIn 1s ease-in;
     }
-
-    /* 반응형 디자인 */
-    @media (max-width: 768px) {
-      #video {
-        width: 90%;
-        height: auto;
-      }
-
-      button {
-        width: 90%;
-        font-size: 1em;
-      }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+    p {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
     }
   </style>
 </head>
 <body>
-  <h1>Webcam Video Recorder</h1>
+  <div class="bg-container"></div>
+  
+  <div class="content-container"> 
 
-  <!-- 비디오 -->
-  <video id="video" width="640" height="480" autoplay muted></video>
-
-  <!-- 촬영 버튼 -->
-  <button id="start">촬영 시작</button>
-
-  <!-- 상태 메시지 -->
-  <p id="status"></p>
+    
+    <h1>Webcam Video Recorder</h1>
+    
+    <!-- 비디오 -->
+    <video id="video" width="640" height="480" autoplay muted></video>
+    
+    <!-- 촬영 버튼 -->
+    <button id="start">촬영 시작</button>
+    
+    <!-- 상태 메시지 -->
+    <p id="status"></p>
+  </div>
 
   <script type="module" src="memory.js"></script>
 </body>

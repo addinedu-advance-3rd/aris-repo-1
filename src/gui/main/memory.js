@@ -4,11 +4,33 @@ let videoStream;
 const videoElement = document.getElementById('video');
 const startButton = document.getElementById('start');
 const status = document.getElementById('status');
-const DEFAULT_DEVICE_ID = 'df6365325f98bec2c16cd8b29720f176dd751c397cbf5c379d4578f4530de3a0';
+let DEFAULT_DEVICE_ID = 'sdf';
 const FALLBACK_DEVICE_ID = '3a44ff7781f8098b3d253d6d6660407fa39dface2eeb2b6f778e01d86140147d';
 import { NGROK_BASE_URL } from './config.js';
 
+
+
+
+
+
 async function initializeWebcam() {
+  
+  try {
+    // 브라우저가 마이크/카메라 권한을 묻고 허용해야 label 정보를 제대로 확인할 수 있음
+    await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+    videoDevices.forEach(device => {
+      console.log(`Label: ${device.label}, DeviceID: ${device.deviceId}`);
+      DEFAULT_DEVICE_ID = device.deviceId;
+      console.log(DEFAULT_DEVICE_ID);
+    });
+  } catch (err) {
+    console.error('Error enumerating devices:', err);
+  }
+
   try {
     // 모든 장치 가져오기
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -19,6 +41,7 @@ async function initializeWebcam() {
     }
 
     // 기본값 또는 대체값에 해당하는 deviceId 찾기
+    console.log(DEFAULT_DEVICE_ID);
     const selectedDeviceId = videoDevices.find(device => device.deviceId === DEFAULT_DEVICE_ID)?.deviceId
       || videoDevices.find(device => device.deviceId === FALLBACK_DEVICE_ID)?.deviceId;
 

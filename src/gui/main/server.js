@@ -13,7 +13,7 @@ app.use(cors());
 // Set up storage for Multer to save files in "img_src" folder
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, 'img_src')); // Save to img_src folder
+    cb(null, path.join(__dirname, 'video_src')); // Save to img_src folder
   },
   filename: function (req, file, cb) {
     cb(null, `recorded_${Date.now()}.webm`); // Unique file name
@@ -24,6 +24,7 @@ const upload = multer({ storage });
 
 // Serve static files (e.g., index.html, img_src files)
 app.use(express.static(path.join(__dirname)));
+
 
 // Handle video upload
 app.post('/upload', upload.single('video'), (req, res) => {
@@ -36,7 +37,7 @@ app.post('/upload', upload.single('video'), (req, res) => {
   
     const response = {
       message: 'Video uploaded successfully!',
-      url: `/img_src/${req.file.filename}`
+      url: `video_src/${req.file.filename}`
     };
     console.log('Response sent:', response);
   
@@ -46,7 +47,7 @@ app.post('/upload', upload.single('video'), (req, res) => {
   
 // List videos in img_src for the current session
 app.get('/latest-video', (req, res) => {
-    const videoFolder = path.join(__dirname, 'img_src');
+    const videoFolder = path.join(__dirname, 'video_src');
     fs.readdir(videoFolder, (err, files) => {
       if (err) {
         console.error("Error reading video directory:", err);
@@ -63,7 +64,7 @@ app.get('/latest-video', (req, res) => {
         .sort((a, b) => b.time - a.time)[0]; // 최신 파일 정렬
   
       if (latestFile) {
-        res.status(200).json({ url: `/img_src/${latestFile.name}` });
+        res.status(200).json({ url: `video_src/${latestFile.name}` });
       } else {
         res.status(404).json({ error: 'No video found' });
       }

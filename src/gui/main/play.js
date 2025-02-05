@@ -1,7 +1,33 @@
+import { NGROK_BASE_URL } from './config.js';
+
+
+document.addEventListener('DOMContentLoaded', function() {
+  const bgContainer = document.querySelector('.bg-container');
+  const rowCount = 22;
+  const itemsPerRow = 22;
+  const horizontalSpacing = 150; // px
+  const verticalSpacing = 100;   // px
+  
+  let html = '';
+  for (let row = 0; row < rowCount; row++) {
+    for (let col = 0; col < itemsPerRow; col++) {
+      const left = col * horizontalSpacing;
+      const top = row * verticalSpacing;
+      const imageIndex = (col % 3) + 1; // 순차적으로 1, 2, 3번 이미지 사용
+      html += `
+        <div class="item" style="top: ${top - 500}px; left: ${left - 700}px;">
+          <img src="img_src/ice_img_${imageIndex}.png" alt="Ice Cream">
+        </div>
+      `;
+    }
+  }
+  bgContainer.innerHTML = html;
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
     try {
       // 최신 영상 가져오기
-      const response = await fetch('/latest-video');
+      const response = await fetch(`${NGROK_BASE_URL}/gui/latest-video`);
       if (!response.ok) {
         throw new Error('Failed to fetch latest video');
       }
@@ -21,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const qrCodeContainer = document.getElementById('qr-code');
       const playbackButton = document.getElementById('start-playback');
       const fullVideoUrl = `${window.location.origin}${data.url}`;
-      const qrCodeUrl = `${window.location.origin}/play.html?video=${encodeURIComponent(data.url)}&invokeShare=true`;
+      const qrCodeUrl = `${window.location.origin}/gui/play.html?video=${encodeURIComponent(data.url)}&invokeShare=true`;
   
       const shareButton = document.getElementById('share-button');
       const backButton = document.getElementById('back');
