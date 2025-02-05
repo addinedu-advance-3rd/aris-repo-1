@@ -17,12 +17,12 @@ target_classes = ['cup']
 confidence_threshold = 0.3  # 높게 설정하여 잘못된 감지를 제거
 
 # 테스트 영상
-test_path = "/home/addinedu/venv/objectdetection/cup_detect/testing/"
-video_file = test_path + "7.mp4"  
-cap = cv2.VideoCapture(video_file)
+#test_path = "/home/addinedu/venv/objectdetection/cup_detect/testing/"
+#video_file = test_path + "7.mp4"  
+#cap = cv2.VideoCapture(video_file)
 
 # 웹캠 설정
-#cap = cv2.VideoCapture(0)  # 웹캠 사용
+cap = cv2.VideoCapture(0)  # 웹캠 사용
 
 try:
     while True:

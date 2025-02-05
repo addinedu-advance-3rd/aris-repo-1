@@ -20,6 +20,6 @@ RUN apt-get update -y && \
 COPY . /app/
 
 # 애플리케이션 실행
-CMD ["python", "cup_test.py"]
+CMD ["python", "write_test2.py"]
 
 # sudo docker run -it --device /dev/video2:/dev/video2 --gpus '"device=0"' -p 6000:6000 507c10e0d63f /bin/bash
