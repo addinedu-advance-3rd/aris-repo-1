@@ -4,20 +4,110 @@
   <meta charset="utf-8">
   <title>Select Toppings</title>
 </head>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+    background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+    color: #333;
+  }
+
+  /* 배경 아이스크림 애니메이션 컨테이너 */
+  .bg-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1; /* 다른 콘텐츠 뒤에 위치 */
+    background: transparent;
+  }
+  .item {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    /* background: #4169e1; */
+    animation: diagonal-move-anim 10s linear infinite alternate;
+  }
+  @keyframes diagonal-move-anim {
+    0% {
+      transform: translate(0, 0);
+    }
+    100% {
+      transform: translate(150px, 150px);
+    }
+  }
+
+  /* 콘텐츠용 컨테이너 (랜딩, 메인 페이지) */
+  .content-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  .hidden {
+    display: none;
+  }
+  button {
+    padding: 15px 30px;
+    font-size: 1.2em;
+    background-color: #ff6f61;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 20px;
+  }
+  button:hover {
+    background-color: #ff3b2e;
+  }
+  .main-content {
+    animation: fadeIn 1s ease-in;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+  }
+  p {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+  }
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+</style>
 <body>
-  <h1>Select Your Toppings</h1>
+  <div class="bg-container"></div>
+  <div class="content-container">
 
-  <!-- 닉네임 표시 -->
-  <p id="nickname-display"></p>
 
-  <!-- 토핑 선택 폼 -->
-  <form id="topping-form">
-    <label><input type="checkbox" name="topping" value="Chocolate"> Chocolate</label><br>
-    <label><input type="checkbox" name="topping" value="Sprinkles"> Sprinkles</label><br>
-    <label><input type="checkbox" name="topping" value="Strawberries"> Strawberries</label><br>
-    <button type="submit">Order Now</button>
-  </form>
-
+    
+    <h1>Select Your Toppings</h1>
+    
+    <!-- 닉네임 표시 -->
+    <p id="nickname-display"></p>
+    
+    <!-- 토핑 선택 폼 -->
+    <form id="topping-form">
+      <label><input type="checkbox" name="topping" value="Chocolate"> Chocolate</label><br>
+      <label><input type="checkbox" name="topping" value="Sprinkles"> Sprinkles</label><br>
+      <label><input type="checkbox" name="topping" value="Strawberries"> Strawberries</label><br>
+      <button type="submit">Order Now</button>
+    </form>
+    
+  </div>
   <script type="module" src="topping.js"></script>
 </body>
 </html>
