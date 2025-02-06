@@ -1,3 +1,4 @@
+
 let mediaRecorder;
 let recordedChunks = [];
 let videoStream;
@@ -9,6 +10,9 @@ const FALLBACK_DEVICE_ID = '3a44ff7781f8098b3d253d6d6660407fa39dface2eeb2b6f778e
 import { NGROK_BASE_URL } from './config.js';
 
 
+document.addEventListener('DOMContentLoaded', () => {
+  setStreamImage();
+});
 
 
 
@@ -24,6 +28,8 @@ async function initializeWebcam() {
 
     videoDevices.forEach(device => {
       console.log(`Label: ${device.label}, DeviceID: ${device.deviceId}`);
+      
+      // @todo:deviceID 실제 사용할 카메라로 수정하고 아래 로직 주석처리 필요
       DEFAULT_DEVICE_ID = device.deviceId;
       console.log(DEFAULT_DEVICE_ID);
     });
@@ -117,6 +123,16 @@ function uploadVideo(blob) {
       status.textContent = "업로드 실패!";
     });
 }
+
+function setStreamImage() {
+  const imgElement = document.getElementById('cup_detect_stream');
+  imgElement.src = `${NGROK_BASE_URL}/cup/video`;
+  }
+
+window.setStreamImage = setStreamImage;
+
+  
+
 
 // 웹캠 초기화 실행
 initializeWebcam();

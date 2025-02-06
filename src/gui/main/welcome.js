@@ -25,7 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
           if (response.ok) {
             localStorage.setItem('customerNickname', nickname); // 닉네임 저장
             statusMessage.textContent = result.message;
-            window.location.href = '/topping.html'; // 토핑 선택 페이지로 이동
+            if (NGROK_BASE_URL === '') {
+              window.location.href = '/gui/topping.html'; // 토핑 선택 페이지로 이동
+            } else {
+              window.location.href = '/topping.html'; // 토핑 선택 페이지로 이동
+            }
           } else {
             statusMessage.textContent = result.error || 'Error occurred.';
           }

@@ -450,7 +450,8 @@ def check_user():
         return '', 204  # ✅ OPTIONS 요청에 대한 응답 추가
 
 
-    return jsonify({"user_status": face_system.get_user_status(), "recognized_user": face_system.get_recognized_user()})
+    return jsonify({"user_status": face_system.get_user_status(), 
+                    "recognized_user": face_system.get_recognized_user()})
 
 
 
