@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import cv2
-import torch
 import numpy as np
 from ultralytics import YOLO
 import mediapipe as mp
@@ -19,7 +18,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 from xarm.wrapper import XArmAPI
 
 class A_Circle_Arm():
-    def __init__(self, arm_ip):
+    def __init__(self, arm_ip, app):
         self.arm_ip = arm_ip
         self.arm = None  # Initialize as None
         self.connect_to_arm()
