@@ -86,13 +86,20 @@ services:
       context: ./src/cup_detect
       dockerfile: Dockerfile
     container_name: cup_detect_service
+    volumes:
+      - ./src/cup_detect:/app  # 로컬 파일과 컨테이너 파일 매핑
     runtime: nvidia  # GPU 사용 (그래픽카드 없는 경우 대응 위해 주석 처리)
     environment:
       - NVIDIA_VISIBLE_DEVICES=0  # GPU 0 사용 (첫 번째 GPU)
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
     expose:
       - "6000"
+    devices:
+      - "/dev/video0:/dev/video0"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
     networks:
         - mynet
+    restart: always
 
     # devices:
       # - "/dev/video2:/dev/video2"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
