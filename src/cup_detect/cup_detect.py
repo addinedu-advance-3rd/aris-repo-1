@@ -42,6 +42,10 @@ class CupBoundaryDetector:
 
         # Event detection settings
         self.post_event_seconds = post_event_seconds
+        self.event_time = None
+        self.initial_detected = False
+        self.object_outside_boundary = False
+
 
         # CUDA or CPU
         if use_cuda and torch.cuda.is_available():
@@ -64,270 +68,82 @@ class CupBoundaryDetector:
 
         print("init_done", flush=True)
 
-    def stream_video_test(self):
-        self.load_model()
-        fps = self.setup_video()
-        initial_detected = False
-        event_time = None
-        break_count = 0
-        post_event_frames = int(fps * self.post_event_seconds)
-
-        # self.cap = cv2.VideoCapture(0)
-
-        while True:
-            ret, frame = self.cap.read()
-            if (frame is None):
-                print("stream_video_break-frame is None", flush=True)
-                break
-            if frame is not None:
-                _, buffer = cv2.imencode('.jpg', frame)
-                frame_bytes = buffer.tobytes()
-                print(f"Sending frame: {len(frame_bytes)} bytes", flush=True)
-
-                results = self.model(frame)
-                df_results = results.pandas().xyxy[0]
-                object_outside_boundary = False
-                filtered_results = df_results[
-                    (df_results['name'].isin(self.target_classes)) &
-                    (df_results['confidence'] > self.confidence_threshold) &
-                    (df_results['xmin'] >= 150) &
-                    (df_results['xmax'] <= 450) &
-                    (df_results['ymax'] >= 200)
-                ]
-
-        # # 감지 결과 표시
-        # for _, row in filtered_results.iterrows():
-        #     x1, y1, x2, y2 = int(row['xmin']), int(row['ymin']), int(row['xmax']), int(row['ymax'])
-        #     label = f"{row['name']} {row['confidence']:.2f}"
-        #     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        #     cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
 
-                for _, row in df_results.iterrows():
-                    if row['name'] in self.target_classes and row['confidence'] > self.confidence_threshold:
-                        xmin, xmax = int(row['xmin']), int(row['xmax'])
-                        ymin, ymax = int(row['ymin']), int(row['ymax'])
-                        confidence = row['confidence']
-                        label = f"{row['name']} {confidence:.2f}"
-
-                        cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
-                        cv2.putText(frame, label, (xmin, ymin - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                        
-
-                print("printing frame", post_event_frames)
-
-                return frame
-            else:
-                print("Empty frame received")
-                break
-        self.cap.release()
-
-
-    def process_frame(self, frame):
+    def process_frame(self, frame, cap):
 
             results = self.model(frame)
             df_results = results.pandas().xyxy[0]
-            initial_detected = False
+            self.cap = cap
+            # self.initial_detected = False
+            # self.object_outside_boundary = False
             # print("initial_detected", initial_detected, flush=True)
-            object_outside_boundary = False
+            # event_time = None
+            # ✅ 사용자가 설정한 바운더리 박스 (파란색)
+            overlay = frame.copy()
+            alpha = 0.3  # 투명도 설정 (0: 완전 투명, 1: 완전 불투명)
+            cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)  # ✅ 블렌딩 적용
 
-            # Check detections
+
+            # ✅ 바운더리 박스 그리기
+            # 테스트 후 주석 처리 필요
+            cv2.rectangle(frame, (self.boundary_xmin, self.boundary_ymin),
+                        (self.boundary_xmax, self.boundary_ymax), (255, 0, 0), 2)
+            cv2.rectangle(frame, (self.outside_xmin, self.outside_ymin),
+                        (self.outside_xmax, self.outside_ymax), (0, 255, 0), 2)
+
+
+            cv2.putText(frame, "Detection Zone", (self.boundary_xmin, self.boundary_ymin - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+
+            # ✅ 객체 감지 확인
+            # if df_results.empty:
+            #     print("❌ No objects detected!", flush=True)
+            #     return frame
+
+            # print(df_results[['name', 'confidence']], flush=True)
+
             for _, row in df_results.iterrows():
+                if df_results.empty:
+                    return frame   # 데이터프레임이 비어 있으면 다음 루프로 넘어감
                 if row['name'] in self.target_classes and row['confidence'] > self.confidence_threshold:
                     xmin, xmax = int(row['xmin']), int(row['xmax'])
+                    x_center = (xmin + xmax) / 2
                     ymin, ymax = int(row['ymin']), int(row['ymax'])
+                    y_center = (ymin + ymax) / 2
                     confidence = row['confidence']
                     label = f"{row['name']} {confidence:.2f}"
 
-                    # Draw bounding boxes
-                    cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
-                    cv2.putText(frame, label, (xmin, ymin - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-                    # Check if object is initially inside boundary
-                    if (xmin >= self.boundary_xmin and xmax <= self.boundary_xmax and
-                            ymin >= self.boundary_ymin and ymax <= self.boundary_ymax):
-                        if not initial_detected:
-                            initial_detected = True
-                            print("객체가 처음 바운더리 안에 있습니다.")
-
-                    # Check if object moves outside boundary
-                    elif initial_detected and (xmin >= self.outside_xmin and xmax <= self.outside_xmax and
-                                            ymin >= self.outside_ymin and ymax <= self.outside_ymax):
-                        object_outside_boundary = True
-                        if event_time is None:
-                            event_time = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
-                            print(f"Event detected at: {event_time:.2f} seconds")
+                    #  if not empty dataframe
+                    # if len(xmin) > 0:
+                    print(f"xmin: {xmin}, xmax: {xmax}, ymin: {ymin}, ymax: {ymax}", flush=True)
 
 
-                # 
-                # Write to output
+                    # ✅ 1. 객체가 처음 "바운더리 안"에 들어오면 감지 시작
+                    if (x_center >= self.boundary_xmin and x_center <= self.boundary_xmax and
+                            y_center >= self.boundary_ymin and y_center <= self.boundary_ymax):
+                        if not self.initial_detected:  # ✅ 최초 진입 감지
+                            self.initial_detected = True
+                            print("📌 객체가 처음 바운더리 안에 들어왔습니다.")
 
-                    # self.out.write(frame)
-                    # self.out.write(frame)
+                        # ✅ 3. 객체가 다시 안으로 들어오면, object_outside_boundary를 False로 설정
+                        self.object_outside_boundary = False
 
-                    # Event handling
-                    # if object_outside_boundary:
-                    #     print("이벤트 발생: 객체가 바운더리를 벗어났습니다.")
-                    #     if break_count == 0:  # Start counting after the event
-                    #         break_count += 1
+                    # ✅ 2. 객체가 바깥 바운더리로 나가면 이벤트 감지
+                    elif self.initial_detected and (
+                            x_center < self.outside_xmin or x_center > self.outside_xmax or
+                            y_center < self.outside_ymin or y_center > self.outside_ymax):
+                        if not self.object_outside_boundary:  # ✅ 바깥 바운더리로 처음 나갔을 때만 이벤트 발생
+                            self.object_outside_boundary = True
+                            self.event_time = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
+                            print(f"🚨 이벤트 발생: 객체가 바운더리를 벗어났습니다. (Event Time: {self.event_time:.2f} 초)")
 
-                    # # Draw boundary boxes
-                    # cv2.rectangle(frame, (self.boundary_xmin, self.boundary_ymin),
-                    #             (self.boundary_xmax, self.boundary_ymax), (255, 0, 0), 2)
-                    # cv2.rectangle(frame, (self.outside_xmin, self.outside_ymin),
-                    #             (self.outside_xmax, self.outside_ymax), (255, 0, 0), 2)
-
-                    # if event_time and break_count > 0 and break_count < post_event_frames:
-                    #     break_count += 1
-                    # elif break_count >= post_event_frames:
-                    #     break
-
-
-
+                        # ✅ 4. 객체가 바운더리 밖으로 나가면, initial_detected를 False로 재설정하여 다시 감지 가능하도록 함
+                        self.initial_detected = False
 
             return frame
 
 
-    def detect_and_write(self, fps: float):
-
-        print("detect_and_write", flush=True)
-        print("fps : ", fps, flush=True)
-        """
-        Read frames, perform detection, draw bounding boxes,
-        and save frames to the output video.
-        Stop recording after the specified post-event frames.
-        """
-
-        # Flags and counters
-        initial_detected = False
-        event_time = None
-        break_count = 0
-        post_event_frames = int(fps * self.post_event_seconds)
-
-        try:
-            print("detect_and_write_try", flush=True)
-            
-
-            while True:
-                ret, frame = self.cap.read()
-                if (frame is None):
-                    print("stream_video_break-frame is None", flush=True)
-                    break
-                if frame is not None:
-                    _, buffer = cv2.imencode('.jpg', frame)
-                    frame_bytes = buffer.tobytes()
-                    # print(f"Sending frame: {len(frame_bytes)} bytes", flush=True)
-
-                    yield (b'--frame\r\n'
-                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-                else:
-                    print("Empty frame received")
-                    break
-                if not ret:
-                    print("stream_video_break", flush=True)
-                    break
-                print("stream_video_continue", flush=True)
-                # yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame.tobytes() + b'\r\n')
-            self.cap.release()
-                        # Run detection
-
-            
-            results = self.model(frame)
-            df_results = results.pandas().xyxy[0]
-
-            object_outside_boundary = False
-
-            # Check detections
-            for _, row in df_results.iterrows():
-                if row['name'] in self.target_classes and row['confidence'] > self.confidence_threshold:
-                    xmin, xmax = int(row['xmin']), int(row['xmax'])
-                    ymin, ymax = int(row['ymin']), int(row['ymax'])
-                    confidence = row['confidence']
-                    label = f"{row['name']} {confidence:.2f}"
-
-                    # Draw bounding boxes
-                    cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
-                    cv2.putText(frame, label, (xmin, ymin - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-                    # Check if object is initially inside boundary
-                    if (xmin >= self.boundary_xmin and xmax <= self.boundary_xmax and
-                            ymin >= self.boundary_ymin and ymax <= self.boundary_ymax):
-                        if not initial_detected:
-                            initial_detected = True
-                            print("객체가 처음 바운더리 안에 있습니다.", flush=True)
-
-                    # Check if object moves outside boundary
-                    elif initial_detected and (xmin >= self.outside_xmin and xmax <= self.outside_xmax and
-                                            ymin >= self.outside_ymin and ymax <= self.outside_ymax):
-                        object_outside_boundary = True
-                        if event_time is None:
-                            event_time = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
-                            print(f"Event detected at: {event_time:.2f} seconds")
-
-
-                # 
-                # Write to output
-
-                    # self.out.write(frame)
-                    # self.out.write(frame)
-
-                    # Event handling
-                    if object_outside_boundary:
-                        print("이벤트 발생: 객체가 바운더리를 벗어났습니다.")
-                        if break_count == 0:  # Start counting after the event
-                            break_count += 1
-
-                    # Draw boundary boxes
-                    cv2.rectangle(frame, (self.boundary_xmin, self.boundary_ymin),
-                                (self.boundary_xmax, self.boundary_ymax), (255, 0, 0), 2)
-                    cv2.rectangle(frame, (self.outside_xmin, self.outside_ymin),
-                                (self.outside_xmax, self.outside_ymax), (255, 0, 0), 2)
-
-                    if event_time and break_count > 0 and break_count < post_event_frames:
-                        break_count += 1
-                    elif break_count >= post_event_frames:
-                        break
-
-                # else:
-                #     print("Empty frame received")
-                #     break
-                # if not ret:
-                #     print("stream_video_break", flush=True)
-                #     break
-                # print("stream_video_continue", flush=True)
-
-                # Show the detection in a window (optional)
-                # cv2.imshow('YOLOv5 Detection', frame)
-                # if cv2.waitKey(30) & 0xFF == ord('q'):
-                #     break
-
-        finally:
-            # Clean up
-            self.cap.release()
-            self.out.release()
-            cv2.destroyAllWindows()
-
-    def run_detection(self):
-        print("run_detection", flush=True)
-
-        """
-        Main entry point to load the model, set up video I/O,
-        run detection, and clean up.
-        """
-        self.load_model()
-        fps = self.setup_video()
-        self.detect_and_write(fps)
-
-    def __del__(self):
-        """
-        Destructor to ensure resources are released if something goes wrong
-        and the object is destroyed before run_detection completes.
-        """
-        if self.cap and self.cap.isOpened():
-            self.cap.release()
-        if self.out:
-            self.out.release()
-        cv2.destroyAllWindows()
 
 
 def extract_last_10_seconds(input_file: str, output_file: str, output_fps: float = 30.0) -> None:
@@ -398,10 +214,14 @@ def video():
 
 def stream_video():
     cap = cv2.VideoCapture(0)
-    initial_detected = False
-    event_time = None
+    # initial_detected = False
+    # event_time = None
     break_count = 0
     # post_event_frames = int(fps * post_event_seconds)
+
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter('output.avi', fourcc, 30.0, (600, 480))
+    
 
 
     # cap = cv2.VideoCapture('/app/last_10_seconds.avi')
@@ -426,9 +246,19 @@ def stream_video():
         if frame is not None:
             _, buffer = cv2.imencode('.jpg', frame)
             frame_bytes = buffer.tobytes()
-            print(f"Sending frame: {len(frame_bytes)} bytes", flush=True)
+            # print(f"Sending frame: {len(frame_bytes)} bytes", flush=True)
 
-            processed_frame = detector.process_frame(frame)
+            processed_frame = detector.process_frame(frame, cap)
+            if processed_frame is not None:
+                out.write(processed_frame)
+            elif processed_frame is None:
+                print("processed_frame is None", flush=True)
+             # ✅ BGR 포맷이 아닐 경우 변환
+            if len(processed_frame.shape) == 2:  # Grayscale인 경우
+                processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_GRAY2BGR)
+            elif processed_frame.shape[2] == 4:  # RGBA인 경우
+                processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_RGBA2BGR)
+
 
 
             yield (b'--frame\r\n'
@@ -439,9 +269,11 @@ def stream_video():
         if not ret:
             print("stream_video_break", flush=True)
             break
-        print("stream_video_continue", flush=True)
+        # print("stream_video_continue", flush=True)
         # yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame.tobytes() + b'\r\n')
+        out.write(processed_frame)
         ret2, buffer = cv2.imencode('.jpg', processed_frame)
+
         if not ret2:
             print("Failed to encode frame.")
             break

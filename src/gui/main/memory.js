@@ -87,21 +87,21 @@ async function initializeWebcam() {
 }
 
 // 촬영 시작 버튼
-startButton.addEventListener('click', function() {
-  if (!mediaRecorder) {
-    status.textContent = "MediaRecorder가 초기화되지 않았습니다.";
-    return;
-  }
-  recordedChunks = [];
-  mediaRecorder.start();
-  status.textContent = "촬영 중...";
-  startButton.disabled = true;
+// startButton.addEventListener('click', function() {
+//   if (!mediaRecorder) {
+//     status.textContent = "MediaRecorder가 초기화되지 않았습니다.";
+//     return;
+//   }
+//   recordedChunks = [];
+//   mediaRecorder.start();
+//   status.textContent = "촬영 중...";
+//   startButton.disabled = true;
 
-  setTimeout(() => {
-    mediaRecorder.stop();
-    status.textContent = "촬영 완료! 업로드 중...";
-  }, 5000); // 촬영 시간 조정 (5초)
-});
+//   setTimeout(() => {
+//     mediaRecorder.stop();
+//     status.textContent = "촬영 완료! 업로드 중...";
+//   }, 5000); // 촬영 시간 조정 (5초)
+// });
 
 // 업로드 및 리디렉션
 function uploadVideo(blob) {
