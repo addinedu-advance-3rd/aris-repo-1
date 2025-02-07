@@ -285,6 +285,10 @@ class A_Circle_Arm():
                 time.sleep(0.1)
                 cv2.imshow("Robot Arm & Hand Tracking", frame)
 
+                # 'q' 키를 누르면 종료
+                if cv2.waitKey(30) & 0xFF == ord('q'):
+                    break
+
 
     def set_collision_status(self, status): # 현재 사용 x
         self.collision_detected = status
@@ -553,4 +557,4 @@ if __name__ == "__main__":
     my_arm = A_Circle_Arm("192.168.1.182", app)
 
     # Run Flask server
-    app.run(host='0.0.0.0', port=8080, threaded=True)
+    app.run(host='0.0.0.0', port=8080, threaded=True)z
