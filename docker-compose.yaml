@@ -41,8 +41,8 @@ services:
     # privileged: true  # 컨테이너가 호스트 
     environment:
       - NVIDIA_VISIBLE_DEVICES=0  # GPU 0 사용 (첫 번째 GPU)
-    devices:
-      - "/dev/video0:/dev/video0"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
+    #devices:
+    #  - "/dev/video0:/dev/video0"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
     volumes:
       - ./src/face_detect:/app  # 로컬 파일과 컨테이너 파일 매핑
     expose:
