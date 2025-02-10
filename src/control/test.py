@@ -557,4 +557,4 @@ if __name__ == "__main__":
     my_arm = A_Circle_Arm("192.168.1.182", app)
 
     # Run Flask server
-    app.run(host='0.0.0.0', port=8080, threaded=True)z
+    app.run(host='0.0.0.0', port=8080, threaded=True)
