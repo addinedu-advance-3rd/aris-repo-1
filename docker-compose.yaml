@@ -58,6 +58,7 @@ services:
     container_name: gui_service
     volumes:
       - ./src/gui:/app  # 로컬 파일과 컨테이너 파일 매핑
+      - shared_video:/app/main/video_src
     environment:
       - ENV_VAR_NAME=value  # 필요한 환경 변수 추가 (예시)
     depends_on:
@@ -88,6 +89,7 @@ services:
     container_name: cup_detect_service
     volumes:
       - ./src/cup_detect:/app  # 로컬 파일과 컨테이너 파일 매핑
+      - shared_video:/app/video_src
     runtime: nvidia  # GPU 사용 (그래픽카드 없는 경우 대응 위해 주석 처리)
     environment:
       - NVIDIA_VISIBLE_DEVICES=0  # GPU 0 사용 (첫 번째 GPU)
@@ -103,6 +105,11 @@ services:
 
     # devices:
       # - "/dev/video2:/dev/video2"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
+
+volumes:
+  shared_video: 
+    name : shared_video
+
 networks:
   mynet : 
     driver: bridge

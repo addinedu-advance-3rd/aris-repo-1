@@ -4,6 +4,15 @@ import time
 import os
 from flask import Flask, render_template, Response
 from flask_cors import CORS
+import threading
+import queue
+import numpy as np
+import requests
+import subprocess
+import sys
+import subprocess
+
+
 
 app = Flask(__name__)
 CORS(app)
@@ -18,7 +27,7 @@ class CupBoundaryDetector:
     def __init__(self,
                 #  video_path: str,
                  video_path: int,
-                 output_path: str = 'output.avi',
+                #  output_path: str = 'output.avi',
                  target_classes: list = None,
                  confidence_threshold: float = 0.45,
                  boundary_coords: tuple = (180, 420, 180, 350),
@@ -29,7 +38,7 @@ class CupBoundaryDetector:
 
 
         self.video_path = 0
-        self.output_path = output_path
+        # self.output_path = output_path
         self.target_classes = target_classes if target_classes else ['cup']
         self.confidence_threshold = confidence_threshold
 
@@ -45,6 +54,8 @@ class CupBoundaryDetector:
         self.event_time = None
         self.initial_detected = False
         self.object_outside_boundary = False
+        self.out = None
+        self.frame_queue = queue.Queue(maxsize=100)
 
 
         # CUDA or CPU
@@ -57,7 +68,6 @@ class CupBoundaryDetector:
 
         # Internal variables
         self.cap = None
-        self.out = None
         self.model = None
         try:
             self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='custom_data/cup_detect_coco_finetune/weights/best.pt')
@@ -68,8 +78,32 @@ class CupBoundaryDetector:
 
         print("init_done", flush=True)
 
-
-
+    #############################################
+    # Define the Saving Thread Function
+    #############################################
+    # def saving_video_thread(self, frame_queue, output_path, fourcc, fps, frame_size):
+    def saving_video_thread(self, frame_queue, output_path, fourcc, fps, frame_size):
+        """
+        Continuously reads frames from frame_queue and writes them to the output video file.
+        A 'None' frame is used as a sentinel to signal the thread to exit.
+        """
+        out = cv2.VideoWriter(output_path, fourcc, fps, frame_size)
+        self.out = out
+        if not out.isOpened():
+            print("Failed to open output video file.")
+            return
+        frame_count = 0
+        while True:
+            frame = frame_queue.get()  # blocks until a frame is available
+            if frame is None:  # sentinel received: end the thread
+                break
+            # print("saving_video_thread", flush=True)
+            out.write(frame)
+            frame_count += 1
+        self.out.release()
+        print("saving_video_thread_done", flush=True)
+        print(f"Frame {frame_count} written to video.", flush=True)
+        
     def process_frame(self, frame, cap):
 
             results = self.model(frame)
@@ -116,7 +150,7 @@ class CupBoundaryDetector:
 
                     #  if not empty dataframe
                     # if len(xmin) > 0:
-                    print(f"xmin: {xmin}, xmax: {xmax}, ymin: {ymin}, ymax: {ymax}", flush=True)
+                    # print(f"xmin: {xmin}, xmax: {xmax}, ymin: {ymin}, ymax: {ymax}", flush=True)
 
 
                     # ✅ 1. 객체가 처음 "바운더리 안"에 들어오면 감지 시작
@@ -137,63 +171,21 @@ class CupBoundaryDetector:
                             self.object_outside_boundary = True
                             self.event_time = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
                             print(f"🚨 이벤트 발생: 객체가 바운더리를 벗어났습니다. (Event Time: {self.event_time:.2f} 초)")
+                            # self.out.release()
+                            convert_to_mp4()
+                            self.frame_queue.put(None)
+                            print("saving_video_thread_done_EVENT", flush=True)
+
 
                         # ✅ 4. 객체가 바운더리 밖으로 나가면, initial_detected를 False로 재설정하여 다시 감지 가능하도록 함
                         self.initial_detected = False
 
             return frame
 
-
-
-
-def extract_last_10_seconds(input_file: str, output_file: str, output_fps: float = 30.0) -> None:
-
-#     Extract the last 10 seconds from a video and write it to output_file.
-    if not os.path.exists(input_file):
-        print(f"Error: The file {input_file} does not exist.")
-        return
-
-    cap = cv2.VideoCapture(input_file)
-    if not cap.isOpened():
-        print(f"Error: Could not open {input_file}")
-        return
-
-    original_fps = cap.get(cv2.CAP_PROP_FPS)
-    if original_fps <= 0:
-        print("Warning: Original FPS is invalid, defaulting to 30.0")
-        original_fps = 30.0
-
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-    if frame_width == 0 or frame_height == 0:
-        print("Error: Invalid frame size. Cannot extract last 10 seconds.")
-        cap.release()
-        return
-
-    # Calculate start frame for the last 10 seconds
-    last_10_seconds_start_frame = max(0, total_frames - int(original_fps * 10))
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(output_file, fourcc, output_fps, (frame_width, frame_height))
-
-    # Position the video capture at the start frame
-    cap.set(cv2.CAP_PROP_POS_FRAMES, last_10_seconds_start_frame)
-
-    try:
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            out.write(frame)
-    finally:
-        cap.release()
-        out.release()
-
 detector = CupBoundaryDetector(
     video_path='0',
     # video_path='testing/6.mp4',
-    output_path='output.avi',
+    # output_path='output.avi',
     target_classes=['cup'],
     confidence_threshold=0.45,
     boundary_coords=(180, 420, 180, 350),  # (xmin, xmax, ymin, ymax)
@@ -217,16 +209,24 @@ def stream_video():
     # initial_detected = False
     # event_time = None
     break_count = 0
-    # post_event_frames = int(fps * post_event_seconds)
-
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter('output.avi', fourcc, 30.0, (600, 480))
-    
+    # post_event_frames = int(fps * post_event_seconds)    
 
 
     # cap = cv2.VideoCapture('/app/last_10_seconds.avi')
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 600)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    # fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    # fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+
+    # fourcc= cv2.cv.CV_FOURCC('m', 'p', '4', 'v')
+
+    # out = cv2.VideoWriter('output.avi', fourcc, 30.0, (600, 480))
+    
+    save_thread = threading.Thread(target=detector.saving_video_thread, args=(detector.frame_queue, 'output.avi', fourcc, 30.0, (int(cap.get(3)), int(cap.get(4)))))
+    save_thread.daemon = True
+    save_thread.start()
+
     if not cap.isOpened():
         print("Failed to open.")
         return  # Or yield nothing
@@ -236,9 +236,17 @@ def stream_video():
     print("fps", fps, flush=True)
     if fps == 0:
         fps = 30.0  # fallback if fps is 0
+    err_count = 0
 
+
+    start_time = time.time()
 
     while True:
+        if time.time() - start_time > 15:
+            print("Timeout reached: 15 seconds elapsed. Finishing recording.", flush=True)
+            break
+
+
         ret, frame = cap.read()
         if (frame is None):
             print("stream_video_break-frame is None", flush=True)
@@ -249,17 +257,34 @@ def stream_video():
             # print(f"Sending frame: {len(frame_bytes)} bytes", flush=True)
 
             processed_frame = detector.process_frame(frame, cap)
-            if processed_frame is not None:
-                out.write(processed_frame)
-            elif processed_frame is None:
-                print("processed_frame is None", flush=True)
              # ✅ BGR 포맷이 아닐 경우 변환
             if len(processed_frame.shape) == 2:  # Grayscale인 경우
                 processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_GRAY2BGR)
             elif processed_frame.shape[2] == 4:  # RGBA인 경우
                 processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_RGBA2BGR)
 
+            try :
+                if processed_frame is not None and processed_frame.shape[0] > 0 and processed_frame.shape[1] > 0:
+                    try:
+                        detector.frame_queue.put(processed_frame, block=False)
+                        # print(f"📌 Frame added to queue. Queue size: {detector.frame_queue.qsize()}", flush=True)
+                    except Exception as e:
+                        print(f"Error: {e}")
+                        err_count += 1
+                        if err_count > 10:
+                            print("Error: 10 frames in a row", flush=True)
+                            convert_to_mp4()
+                            # video_recording_done()
+                            detector.frame_queue.put(None)
+                            break
+                    
 
+                else:
+                    print("⚠️ Invalid processed_frame detected! Skipping...", flush=True)
+                # dummy_frame = np.zeros((600, 480, 3), dtype=np.uint8)
+                detector.frame_queue.put(processed_frame, block=False)
+            except Exception as e:
+                print(f"Error: {e}")
 
             yield (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
@@ -269,9 +294,6 @@ def stream_video():
         if not ret:
             print("stream_video_break", flush=True)
             break
-        # print("stream_video_continue", flush=True)
-        # yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame.tobytes() + b'\r\n')
-        out.write(processed_frame)
         ret2, buffer = cv2.imencode('.jpg', processed_frame)
 
         if not ret2:
@@ -281,18 +303,55 @@ def stream_video():
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n\r\n')
     cap.release()
+    detector.frame_queue.put(None)  # Signal the saving thread to exit
+    save_thread.join()
+    time.sleep(1)
+    print("VIDEO RECORDING AND SAVING DONE", flush=True)
+    convert_to_mp4()
+    # video_recording_done()
+# request post video recording done 
+
+def convert_to_mp4(input_file="output.avi", output_file="/app/video_src/output.mp4"):
+    """Converts AVI file to MP4 using FFmpeg"""
+    try:
+        output_dir =  os.path.dirname(output_file)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+            print(f"✅ Created output directory: {output_dir}")
 
 
+        print("convert_to_mp4", flush=True)
+        subprocess.run([
+            "ffmpeg","-y", "-i", input_file, "-vcodec", "libx264", "-acodec", "aac", output_file
+        ], check=True)
+        print(f"✅ Conversion to MP4 successful: {output_file}")
+        video_recording_done()
+    except subprocess.CalledProcessError as e:
+        print(f"❌ FFmpeg conversion failed: {e}")
+
+
+
+def video_recording_done():
+    # convert_to_mp4()
+    """
+    Sends a 'done' status to the Node.js GUI container by making a POST request.
+    The endpoint is assumed to be 'http://gui_service:3001/video_recording_done'.
+    """
+    print("video_recording_done_post", flush=True)
+    url = 'http://gui_service:3001/video_recording_done'
+    # url = 'http://127.0.0.1:3001/video_recording_done'
+    payload = {"status": "done"}
+    headers = {'Content-Type': 'application/json'}
+    try:
+        print("video_recording_done_post_try", flush=True)
+        response = requests.post(url, json=payload, timeout=5)
+        response.raise_for_status()  # Raise an error if the status is not 200-299
+        print("Successfully sent done status to Node.js GUI container.", flush=True)
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending done status: {e}", flush=True)
 
 
 if __name__ == "__main__":
     
-    # 테스트 코드
-    # detector.run_detection()
-    
-    app.run(host='0.0.0.0', port=6000, debug=True)
-    # Example usage
 
-    # Run the detection
-
-    # Extract the last 10 seconds
+    app.run(host='0.0.0.0', port=6000, debug=True, threaded=True)
