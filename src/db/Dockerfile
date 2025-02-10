@@ -1,23 +1,19 @@
-# 1. Python 이미지를 베이스로 설정
+# Python 이미지 기반으로 SQLite 설치
 FROM python:3.10-slim
 
-# 2. 작업 디렉토리 설정
+# 작업 디렉토리 설정
 WORKDIR /app
 
-# 3. 의존성 파일을 컨테이너에 복사
-COPY requirements.txt /app/
+# 필요한 라이브러리 설치 (예: sqlite3)
+RUN pip install --upgrade pip
+RUN pip install flask
+RUN pip install numpy
 
-# 4. 의존성 설치
-RUN pip install --no-cache-dir -r requirements.txt
+# DB 파일을 저장할 디렉토리 만들기
+RUN mkdir -p /data/db
 
-# 5. 전체 프로젝트 파일을 복사
-COPY . /app/
+# 애플리케이션 코드와 DB 파일을 컨테이너에 복사
+COPY . /app
 
-# 6. 환경 변수 설정
-ENV PYTHONUNBUFFERED 1
-
-# 7. 포트 설정
-EXPOSE 8000
-
-# 8. 장고의 서버 실행 명령
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# 기본 실행 커맨드 설정 (필요한 경우)
+CMD ["python", "app.py"]
