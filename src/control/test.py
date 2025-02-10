@@ -282,11 +282,10 @@ class A_Circle_Arm():
                                 1, (0, 0, 255), 3, cv2.LINE_AA)  # 빨간색 텍스트 출력
 
 
-                time.sleep(0.1)
                 cv2.imshow("Robot Arm & Hand Tracking", frame)
 
                 # 'q' 키를 누르면 종료
-                if cv2.waitKey(30) & 0xFF == ord('q'):
+                if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
 
@@ -308,10 +307,10 @@ class A_Circle_Arm():
     def _grap(self, gripper=True):
         if gripper:
             self.arm.close_lite6_gripper() 
-            time.sleep(1)
+            time.sleep(0.1)
         else:
             self.arm.open_lite6_gripper()
-            time.sleep(1)
+            time.sleep(0.1)
             self.arm.stop_lite6_gripper()
 
     def _move_one_path(self, act, pitch_maintain=True):
@@ -338,7 +337,7 @@ class A_Circle_Arm():
             
             print(f"[INFO] Moving to pose {pose_index}: {pose}")
             self.arm.set_position(*pose, speed=self.speed, mvacc=self.mvacc, wait=True)
-            time.sleep(1)
+
 
         print(f"[INFO] Path '{act}' completed.")
 
@@ -421,100 +420,100 @@ class A_Circle_Arm():
        
         if topping_1 and topping_2 and topping_3:
             self._move_one_path("topping_1")
-            time.sleep(2)
+            time.sleep(0.2)
             self.arm.set_cgpio_digital(0,1)
-            time.sleep(5)
+            time.sleep(3)
             self.arm.set_cgpio_digital(0,0)
-            time.sleep(1)
+            time.sleep(0.2)
             self._move_one_path("after_topping_1")
             self._move_one_path("topping_2")
-            time.sleep(2)
+            time.sleep(0.2)
             self.arm.set_cgpio_digital(1,1)
-            time.sleep(5)
+            time.sleep(3)
             self.arm.set_cgpio_digital(1,0)
-            time.sleep(1)
+            time.sleep(0.2)
             self._move_one_path("after_topping_2")
             self._move_one_path("topping_3")
-            time.sleep(2)
+            time.sleep(0.2)
             self.arm.set_cgpio_digital(2,1)
-            time.sleep(5)
+            time.sleep(3)
             self.arm.set_cgpio_digital(2,0)
-            time.sleep(1)
+            time.sleep(0.2)
             self._move_one_path("after_topping_3")
 
         elif topping_1 and topping_2:
             self._move_one_path("topping_1")
-            time.sleep(2)
+            time.sleep(0.2)
             self.arm.set_cgpio_digital(0,1)
-            time.sleep(5)
+            time.sleep(3)
             self.arm.set_cgpio_digital(0,0)
-            time.sleep(1)
+            time.sleep(0.2)
             self._move_one_path("after_topping_1")
             self._move_one_path("topping_2")
-            time.sleep(2)
+            time.sleep(0.2)
             self.arm.set_cgpio_digital(1,1)
-            time.sleep(5)
+            time.sleep(3)
             self.arm.set_cgpio_digital(1,0)
-            time.sleep(1)
+            time.sleep(0.2)
             self._move_one_path("after_topping_2")
 
         elif topping_1 and topping_3:
             self._move_one_path("topping_1")
-            time.sleep(2)
+            time.sleep(0.2)
             self.arm.set_cgpio_digital(0,1)
-            time.sleep(5)
+            time.sleep(3)
             self.arm.set_cgpio_digital(0,0)
-            time.sleep(1)
+            time.sleep(0.2)
             self._move_one_path("after_topping_1")
             self._move_one_path("topping_3")
-            time.sleep(2)
+            time.sleep(0.2)
             self.arm.set_cgpio_digital(2,1)
-            time.sleep(5)
+            time.sleep(3)
             self.arm.set_cgpio_digital(2,0)
-            time.sleep(1)
+            time.sleep(0.2)
             self._move_one_path("after_topping_3")
         
         elif topping_2 and topping_3:
             self._move_one_path("topping_2")
-            time.sleep(2)
+            time.sleep(0.2)
             self.arm.set_cgpio_digital(1,1)
-            time.sleep(5)
+            time.sleep(3)
             self.arm.set_cgpio_digital(1,0)
-            time.sleep(1)
+            time.sleep(0.2)
             self._move_one_path("after_topping_2")
             self._move_one_path("topping_3")
-            time.sleep(2)
+            time.sleep(0.2)
             self.arm.set_cgpio_digital(2,1)
-            time.sleep(5)
+            time.sleep(3)
             self.arm.set_cgpio_digital(2,0)
-            time.sleep(1)
+            time.sleep(0.2)
             self._move_one_path("after_topping_3")
 
         elif topping_1:
             self._move_one_path("topping_1")
-            time.sleep(2)
+            time.sleep(0.2)
             self.arm.set_cgpio_digital(0,1)
-            time.sleep(5)
+            time.sleep(3)
             self.arm.set_cgpio_digital(0,0)
-            time.sleep(1)
+            time.sleep(0.2)
             self._move_one_path("after_topping_1")
 
         elif topping_2:
             self._move_one_path("topping_2")
-            time.sleep(2)
+            time.sleep(0.2)
             self.arm.set_cgpio_digital(1,1)
-            time.sleep(5)
+            time.sleep(3)
             self.arm.set_cgpio_digital(1,0)
-            time.sleep(1)
+            time.sleep(0.2)
             self._move_one_path("after_topping_2")
         
         elif topping_3:
             self._move_one_path("topping_3")
-            time.sleep(2)
+            time.sleep(0.2)
             self.arm.set_cgpio_digital(2,1)
-            time.sleep(5)
+            time.sleep(3)
             self.arm.set_cgpio_digital(2,0)
-            time.sleep(1)
+            time.sleep(0.2)
             self._move_one_path("after_topping_3")
         
         else:
@@ -530,7 +529,7 @@ class A_Circle_Arm():
         time.sleep(5)  # 잠시 대기
         self._move_one_path("just_give")  # 아이스크림 전달
 
-        if True:   # 아이스크림을 가져갔다면
+        if True:   # 아이스크림을 가져갔다면 ====> 여기서 '아이스크림을 사람이 가져갔다' 라는 정보가 입력되어야 하는데, 어떤 식으로 구현해야 할지 모르겠습니다..
             self._move_one_path("person_to_press_retrieve") # 바로 프레스로 이동
 
         else:      # 아이스크림을 안 가져갔다면
