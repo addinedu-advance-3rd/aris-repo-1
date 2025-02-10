@@ -40,7 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // (추가 기능) 토핑 추천 하기
     const age = localStorage.getItem('customerAge')
     const gender = localStorage.getItem('customerGender')
-
+    const recommendationDisplay = document.getElementById('recommendation-display');
+    
     if (age && gender) {
         const recommendedToppings = getRecommendedToppings(parseInt(age), gender);
         recommendationDisplay.textContent = `추천 토핑: ${recommendedToppings.join(', ')}`;
