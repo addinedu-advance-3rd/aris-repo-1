@@ -1,11 +1,17 @@
 import os
 import sys
 import time
+import cv2
+import numpy as np
+from ultralytics import YOLO
+import mediapipe as mp
+import threading
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})  # This will automatically add the header "Access-Control-Allow-Origin: *" to every response
+
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../..'))
 
@@ -25,11 +31,19 @@ class A_Circle_Arm():
             methods=['POST', 'OPTIONS']
         )
 
+        self.collision_detected = False
+        self.model = YOLO("/home/addinedu/venv/mp_venv/best.pt")
+        self.mp_hands = mp.solutions.hands
+        self.cap = cv2.VideoCapture(0)
+        print("[INFO] Camera initialized for collision detection.")
+
+
         if self.arm:
             try:
                 self.arm.motion_enable(enable=True)
                 self.arm.set_mode(0)
-                self.arm.set_state(state=0)  # 0: sport state, 3: pause state, 4: stop state
+                self.arm.set_state(state=0) # state : 0: sport state, 3: pause state, 4: stop state
+
                 print("[SUCCESS] Arm initialized successfully.")
             except Exception as e:
                 print(f"[ERROR] Failed to initialize arm: {e}")
@@ -47,7 +61,6 @@ class A_Circle_Arm():
                       [184.512177, -95.52092, 150.964706, 106.073968, -90.00000, -17.925959],       # 6
                       [188.249832, 150.832748, 343.810577, 8.6496, -90.000000, 66.370743],         # 7
                       [206.267776, -100.06179, 256.300354, 106.073968, -90.00000, -17.925959],    # 8
-
                       [9.054959, -240.938965, 331.05481, 101.944776, 90.000000, -20.444509],       # 9
                       [-226.724548, -25.836311, 330.765045, 98.07628, 90.000000, -125.882781],     # 10
                       [-245.524109, 141.818008, 338.6409, 33.684934, 90.000000, 134.253809],       # 11
@@ -159,8 +172,8 @@ class A_Circle_Arm():
                        "put_on_ice_2": [16, 41, 35, 36],
                        "put_on_ice_3": [16, 41, 38, 39],
                        "ice_1_to_press_retrieve": [33, 34, 41, 43, 44, 45],
-                       "ice_2_to_press_retrieve": [36, 37, 41, 15, 5, 4, 24],
-                       "ice_3_to_press_retrieve": [39, 40, 41, 15, 5, 4, 24],
+                       "ice_2_to_press_retrieve": [36, 37, 41, 43, 44, 45],
+                       "ice_3_to_press_retrieve": [39, 40, 41, 43, 44, 45],
                        "person_to_press_retrieve": [16, 43, 44, 45],
                        "press_to_waste": [45, 31, 30, 29],
                        "return_to_default": [29, 30, 44, 43, 46, 47, 17], 
@@ -171,6 +184,7 @@ class A_Circle_Arm():
         컵 집고 -> 프레스아래 -> 토핑쪽으로 회전 안됨.
         아이스크림 받고. 바로 컵쪽으로 안됨.(무조건 토핑쪽 방향 이용)
         """
+
     def connect_to_arm(self, max_retries=5, retry_delay=1):
         """ Try connecting to the robotic arm with retry logic. """
         attempt = 0
@@ -192,6 +206,96 @@ class A_Circle_Arm():
             time.sleep(retry_delay)
         print(f"[CRITICAL] Unable to connect to XArm at {self.arm_ip} after {max_retries} attempts. Proceeding without arm control.")
 
+
+
+    def check_collision_and_pause(self):
+        """충돌이 감지되면 로봇을 멈추고, 충돌이 해제될 때까지 대기"""
+        while 1:
+            if self.collision_detected:
+                print("[WARNING] Collision detected! Pausing motion")
+                self.arm.set_state(state=3)  # 3: Pause state (정지)
+                time.sleep(2)
+                
+            else:
+                print("[INFO] Collision cleared. Resuming motion")
+                self.arm.set_state(state=0)  # 0: Resume motion (재개)
+
+            time.sleep(0.1)
+
+
+
+    def detect_collision(self):
+        """손과 로봇팔의 충돌 감지를 수행"""
+        self.last_no_collision_time = None  # 최근 충돌이 없었던 시간을 기록
+
+        with self.mp_hands.Hands(min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands:
+            while self.cap.isOpened():
+                ret, frame = self.cap.read()
+                if not ret:
+                    break
+
+                results = self.model(frame, task="segment", conf=0.25)
+                robot_masks = []
+                for result in results:
+                    if result.masks is not None:
+                        for mask in result.masks.xy:
+                            mask = np.array(mask, dtype=np.int32)
+                            robot_masks.append(mask)
+
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                hand_results = hands.process(rgb_frame)
+
+                collision_detected_now = False  # 현재 프레임에서 충돌 감지 여부
+
+                if hand_results.multi_hand_landmarks:
+                    for hand_landmarks in hand_results.multi_hand_landmarks:
+                        for idx, landmark in enumerate(hand_landmarks.landmark):
+                            h, w, _ = frame.shape
+                            hand_x, hand_y = int(landmark.x * w), int(landmark.y * h)
+
+                            # 🔹 충돌 감지 확인
+                            for mask in robot_masks:
+                                if cv2.pointPolygonTest(mask, (hand_x, hand_y), False) >= 0:
+                                    collision_detected_now = True  # 이번 프레임에서 충돌 발생
+                                    break  # 한 번이라도 충돌 감지되면 즉시 탈출
+
+                # 🔹 충돌이 감지된 경우
+                if collision_detected_now:
+                    if not self.collision_detected:  # 새롭게 충돌 감지가 되었을 때만 출력
+                        print("[ALERT] Collision detected!")
+                    self.collision_detected = True
+                    self.last_no_collision_time = None  # 충돌이 감지되면 타이머 초기화
+
+                # 🔹 손이 감지되지 않거나 충돌이 없을 경우
+                else:
+                    print("Keep going")
+                    if self.last_no_collision_time is None:  
+                        self.last_no_collision_time = time.time()  # 최초 충돌이 없는 순간 기록
+
+                    elif time.time() - self.last_no_collision_time >= 1.0:  
+                        self.collision_detected = False  # 1초 동안 충돌이 없으면 False로 변경
+
+
+                # 🔹 충돌이 감지되었을 경우 로봇을 멈춤
+                if self.collision_detected:
+                    cv2.putText(frame, "Collision Detected!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 
+                                1, (0, 0, 255), 3, cv2.LINE_AA)  # 빨간색 텍스트 출력
+
+
+                time.sleep(0.1)
+                cv2.imshow("Robot Arm & Hand Tracking", frame)
+
+                # 'q' 키를 누르면 종료
+                if cv2.waitKey(30) & 0xFF == ord('q'):
+                    break
+
+
+    def set_collision_status(self, status): # 현재 사용 x
+        self.collision_detected = status
+        if status:
+            print("[ALERT] Collision detected!")
+        else:
+            print("[INFO] Collision cleared.")
 
     def _return_to_default(self):
         joint_angles = [-179.7, 3.6, 33.5, -0.9, -60.1, 0.4]  # 예제: self.poses[17]에 맞게 수정 필요
@@ -220,17 +324,27 @@ class A_Circle_Arm():
             return
         
         route = self.routes[act]
-        for r_n in route:
+        for pose_index in route:
+            pose = self.poses[pose_index]
+            
             if pitch_maintain:
                 pre_pitch = self.arm.get_position()
                 pre_pitch = pre_pitch[1][4]
-                pose = self.poses[r_n]
-                pose [4] = pre_pitch
-            else:
-                pose = self.poses[r_n]
+                pose[4] = pre_pitch  # 기존 pitch 유지
+            
+            """while self.collision_detected:
+                print(f"[WARNING] Collision detected while moving to pose {pose_index}. Pausing...")
+                self.check_collision_and_pause()"""
+            
+            print(f"[INFO] Moving to pose {pose_index}: {pose}")
             self.arm.set_position(*pose, speed=self.speed, mvacc=self.mvacc, wait=True)
+            time.sleep(1)
+
+        print(f"[INFO] Path '{act}' completed.")
+
 
         
+
     def _turn_cup(self, angle):
         # 6번 모터 +360 ~ -360 까지.
         cur_6_motor_angle = self.arm.get_servo_angle(servo_id=6)
@@ -238,7 +352,7 @@ class A_Circle_Arm():
         if cur_6_motor_angle[1] > 0:
             angle = -angle
         self.arm.set_servo_angle(servo_id=6, angle=angle, speed=self.speed, mvacc=self.mvacc, relative=True, wait=True)
-
+    
     def select_toppings(self):
         """ Flask route handler: receives topping data & moves the robot """
         if request.method == "OPTIONS":
@@ -274,12 +388,18 @@ class A_Circle_Arm():
         response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
         return response
 
-
-
+    
     def run(self, toppings):
         topping_1 = toppings[0]
         topping_2 = toppings[1]
         topping_3 = toppings[2]
+
+        # 충돌 감지 관련 멀티스레드
+        collision_thread = threading.Thread(target=self.detect_collision, daemon=True)
+        collision_thread.start()
+
+        collision_handler_thread = threading.Thread(target=self.check_collision_and_pause, daemon=True)
+        collision_handler_thread.start()
         
         # 토핑 선택과 관련된 초기 설정
         self._init_6th_motor()  # 6번째 모터 초기화
@@ -421,7 +541,7 @@ class A_Circle_Arm():
         self._move_one_path("press_to_waste")  # 아이스크림 버리는 위치로
         self._turn_cup(-180)  # 컵 회전
         self._grap(False)  # 그랩 해제
-        time.sleep(1)  # 1초 대기
+        """time.sleep(3)  # 3초 대기"""
         self._return_to_default() # 기본 위치로 돌아가기
         """self._move_one_path("return_to_default")"""
         """self.arm.set_cgpio_analog(0, 5)
@@ -431,11 +551,10 @@ class A_Circle_Arm():
         self.arm.set_cgpio_analog(0, 0)
         time.sleep(3)"""
 
-
-
+ 
 if __name__ == "__main__":
 
     my_arm = A_Circle_Arm("192.168.1.182", app)
 
     # Run Flask server
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=8080, threaded=True)
