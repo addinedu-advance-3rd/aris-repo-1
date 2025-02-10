@@ -37,6 +37,28 @@ document.addEventListener('DOMContentLoaded', () => {
       nicknameDisplay.textContent = '고객님 반가워요!';
     }
 
+    // (추가 기능) 토핑 추천 하기
+    const age = localStorage.getItem('customerAge')
+    const gender = localStorage.getItem('customerGender')
+
+    if (age && gender) {
+        const recommendedToppings = getRecommendedToppings(parseInt(age), gender);
+        recommendationDisplay.textContent = `추천 토핑: ${recommendedToppings.join(', ')}`;
+    } else {
+        recommendationDisplay.textContent = '추천 정보를 가져오지 못했습니다.';
+    }
+
+    // 토핑 추천 로직
+    function getRecommendedToppings(age, gender) {
+      if (age < 18) {
+          return gender === 'male' ? ['조리퐁', '해바라기씨'] : ['초코볼', '해바라기씨'];
+      } else if (age < 30) {
+          return ['조리퐁', '초코볼'];
+      } else {
+          return ['해바라기씨'];
+      }
+    }
+    
     // (2) 폼 제출 시 이벤트 핸들러
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
