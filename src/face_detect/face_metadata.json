@@ -1,4 +1,5 @@
 {
+<<<<<<< Updated upstream
     "Customer": [
         {
             "id": "241e",
@@ -3641,4 +3642,7 @@
             ]
         }
     ]
+=======
+    "Customer": []
+>>>>>>> Stashed changes
 }

@@ -371,7 +371,9 @@ class A_Circle_Arm():
 
         # ✅ Only process movement if the arm is connected
         if self.arm:
-            self.run(toppings)
+            threading.Thread(target=self.run, args=(toppings,), daemon=True).start()
+
+            # self.run(toppings)
         else:
             print("[WARNING] Robot arm is not connected. Skipping movement.")
 
@@ -551,10 +553,12 @@ class A_Circle_Arm():
                 break
             
         else:      # 아이스크림을 안 가져갔다면
+            print("아이스크림을 안 가져갔다면", flush=True)
             self._move_one_path("put_on_ice_1")  # 아이스크림 위치에 올리기
             self._move_one_path("ice_1_to_press_retrieve")  # 그 후 프레스로 이동
         
         self._grap(True)  # 다시 그랩
+        print("아이스크림 버리는 위치로 이동", flush=True)
         self._move_one_path("press_to_waste")  # 아이스크림 버리는 위치로
         self._turn_cup(-180)  # 컵 회전
         self._grap(False)  # 그랩 해제
