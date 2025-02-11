@@ -347,6 +347,9 @@ class A_Circle_Arm():
 
         print(f"[INFO] Path '{act}' completed.")
 
+
+        
+
     def _turn_cup(self, angle):
         # 6번 모터 +360 ~ -360 까지.
         cur_6_motor_angle = self.arm.get_servo_angle(servo_id=6)

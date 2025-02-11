@@ -420,34 +420,41 @@ def stream_video():
 
         processed_frame, user_name, new_face = face_system.process_frame(frame)
         
-        #매칭 상태 처리
-        if user_name is not None and user_name != "new" : #기존 사용자 매칭
-            if matched_user is None:
-                matched_user = user_name
-                recognized_time = time.time()  # 매칭 시간 기록
-                no_match_start_time = None # 노매치 타이머 초기화
-                print(f"Welcome, {user_name}. 3 seconds to exit...", flush=True)
-
-            # 3초 후 종료 조건
-            if matched_user == user_name and recognized_time is not None and (time.time() - recognized_time) > 3:
-                print(f"Goodbye, {user_name}. Exiting stream...", flush=True)
-                face_system.set_completed_status("matched") # 종료 플래그
-                break
-
-        else: # 노매치
-            #매칭 되지 않은 상태일 경우
-            if no_match_start_time is None:
-                no_match_start_time = time.time()
-            
-            # 2초 이상 노매치 상태 유지 시 종료
-            if no_match_start_time and (time.time() - no_match_start_time > 2):
-                print("No face match for 2 seconds. Exiting stream...", flush=True)
-                face_system.set_completed_status("no_match")
-                break
-            
-            # 매칭된 사용자가 없을 경우 상태 초기화
+        # 1. 얼굴이 감지되지 않은 경우
+        if not face_system.get_face_detected():
+            print("No face detected.")
+            no_match_start_time = None  # 노매치 타이머 초기화
+            match_start_time = None
             matched_user = None
-            recognized_time = None
+        else:
+            #매칭 상태 처리
+            if user_name is not None and user_name != "new" : #기존 사용자 매칭
+                if matched_user is None:
+                    matched_user = user_name
+                    recognized_time = time.time()  # 매칭 시간 기록
+                    no_match_start_time = None # 노매치 타이머 초기화
+                    print(f"Welcome, {user_name}. 3 seconds to exit...", flush=True)
+
+                # 3초 후 종료 조건
+                if matched_user == user_name and recognized_time is not None and (time.time() - recognized_time) > 3:
+                    print(f"Goodbye, {user_name}. Exiting stream...", flush=True)
+                    face_system.set_completed_status("matched") # 종료 플래그
+                    break
+
+            else: # 노매치
+                #매칭 되지 않은 상태일 경우
+                if no_match_start_time is None:
+                    no_match_start_time = time.time()
+                
+                # 2초 이상 노매치 상태 유지 시 종료
+                if no_match_start_time and (time.time() - no_match_start_time > 3):
+                    print("No face match for 2 seconds. Exiting stream...", flush=True)
+                    face_system.set_completed_status("no_match")
+                    break
+                
+                # 매칭된 사용자가 없을 경우 상태 초기화
+                matched_user = None
+                recognized_time = None
 
         ret2, buffer = cv2.imencode('.jpg', processed_frame)
         if not ret2:

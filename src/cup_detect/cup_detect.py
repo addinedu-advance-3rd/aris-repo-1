@@ -71,7 +71,6 @@ class CupBoundaryDetector:
         self.model = None
         try:
             # self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='custom_data/cup_detect_coco_finetune/weights/best.pt')
-            torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
             self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='/app/shared_folder/best.pt')
             self.model.eval()  # Set model to evaluation mode
         except Exception as e:
@@ -174,10 +173,6 @@ class CupBoundaryDetector:
                             self.event_time = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
                             print(f"🚨 이벤트 발생: 객체가 바운더리를 벗어났습니다. (Event Time: {self.event_time:.2f} 초)")
                             # self.out.release()
-
-                            # 컵 가져감 이벤트 발생
-
-                            # 이벤트 발생 시 비디오 저장 
                             convert_to_mp4()
                             self.frame_queue.put(None)
                             print("saving_video_thread_done_EVENT", flush=True)
@@ -342,18 +337,25 @@ def convert_to_mp4(input_file="output.avi", output_file="/app/video_src/output.m
             print(f"✅ Created output directory: {output_dir}")
 
 
-        print("convert_to_mp4", flush=True)
+        # 마지막 10초 추출
+        extract_last_10_seconds(input_file, "10_seconds.avi", output_fps=30)
+
+        # 10초 추출된 영상을 MP4로 변환
+        final_output_file = "/app/video_src/10_seconds_output.mp4"
         subprocess.run([
-            "ffmpeg","-y", "-i", input_file, "-vcodec", "libx264", "-acodec", "aac", output_file
+            "ffmpeg", "-y", "-i", "10_seconds.avi", "-vcodec", "libx264", "-acodec", "aac","-r","30", final_output_file
         ], check=True)
-        print(f"✅ Conversion to MP4 successful: {output_file}")
-        video_recording_done()
+        print(f"✅ 10초 영상 MP4 변환 성공: {final_output_file}")
+
+        # Node.js 서버에 전송
+        video_recording_done(final_output_file)
+
     except subprocess.CalledProcessError as e:
         print(f"❌ FFmpeg conversion failed: {e}")
 
 
 
-def video_recording_done():
+def video_recording_done(video_path):
     # convert_to_mp4()
     """
     Sends a 'done' status to the Node.js GUI container by making a POST request.
@@ -362,7 +364,7 @@ def video_recording_done():
     print("video_recording_done_post", flush=True)
     url = 'http://gui_service:3001/video_recording_done'
     # url = 'http://127.0.0.1:3001/video_recording_done'
-    payload = {"status": "done"}
+    payload = {"status": "done","videoPath":video_path}
     headers = {'Content-Type': 'application/json'}
     try:
         print("video_recording_done_post_try", flush=True)
@@ -372,6 +374,32 @@ def video_recording_done():
     except requests.exceptions.RequestException as e:
         print(f"Error sending done status: {e}", flush=True)
 
+#10초 추출 함수
+def extract_last_10_seconds(input_file="output.avi", output_file="10_seconds.avi", output_fps=30):
+    cap = cv2.VideoCapture(input_file)
+    original_fps = cap.get(cv2.CAP_PROP_FPS)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    # 마지막 10초 시작 프레임 계산
+    last_10_seconds_start_frame = max(0, total_frames - int(original_fps * 10))
+    
+    # 새로운 출력 파일 생성
+    out = cv2.VideoWriter(output_file, cv2.VideoWriter_fourcc(*'MJPG'), output_fps, (frame_width, frame_height))
+
+    # 비디오 포인터를 마지막 10초 시작 프레임으로 이동
+    cap.set(cv2.CAP_PROP_POS_FRAMES, last_10_seconds_start_frame)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        out.write(frame)
+
+    cap.release()
+    out.release()
+    print(f"✅ 마지막 10초 영상 추출 완료: {output_file}")
 
 if __name__ == "__main__":
     
