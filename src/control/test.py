@@ -9,79 +9,8 @@ import mediapipe as mp
 import threading
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-# YOLOV5_PATH = "/app/yolov5"
-# if os.path.exists(YOLOV5_PATH):
-#     sys.path.append(YOLOV5_PATH)
+import requests
 
-# print("현재 경로", os.path.dirname(os.path.abspath(__file__)))
-# print(os.path.dirname(os.path.abspath(__file__)))
-# print(os.getcwd())
-# print(sys.path)
-# print("현재 경로", os.path.dirname(os.path.abspath(__file__)))
-
-
-# sys.path.insert(0, './yolov5')
-# sys.path.insert(0, '/app/yolov5')
-# sys.path.insert(0, 'yolov5')
-
-
-# sys.path.append("/app/yolov5")  # YOLOv5 경로 추가
-# sys.path.append("yolov5")  # YOLOv5 경로 추가
-# sys.path.append("./yolov5")  # YOLOv5 경로 추가
-# if os.path.exists("./yolov5"):
-#     print("./YOLOv5 폴더가 존재.", flush=True)
-# if not os.path.exists("./yolov5"):
-#     print("./YOLOv5 폴더가 존재하지 않습니다.", flush=True)
-#     # raise FileNotFoundError("🚨 YOLOv5 폴더가 존재하지 않습니다! Dockerfile에서 복사 또는 설치를 확인하세요.")
-#     # raise FileNotFoundError("🚨 YOLOv5 폴더가 존재하지 않습니다! Dockerfile에서 복사 또는 설치를 확인하세요.")
-
-# if os.path.exists("/app/yolov5"):
-#     print("/app/YOLOv5 폴더가 존재.", flush=True)
-# if not os.path.exists("/app/yolov5"):
-#     print("/app/YOLOv5 폴더가 존재하지 않습니다.", flush=True)
-
-# if os.path.exists("yolov5"):
-#     print("yolov5 폴더가 존재.", flush=True)
-# if not os.path.exists("yolov5"):
-#     print("yolov5 폴더가 존재하지 않습니다.", flush=True)
-
-
-
-# sys.path.append("/app/yolov5")
-# print(sys.path)
-# print("현재 경로", os.path.dirname(os.path.abspath(__file__)))
-# print(os.path.dirname(os.path.abspath(__file__)))
-# print(os.getcwd())
-# print(sys.path)
-# print("현재 경로", os.path.dirname(os.path.abspath(__file__)))
-
-
-
-# yolo_path = "/app/yolov5"
-# if os.path.exists(yolo_path):
-#     print(f"✅ {yolo_path} exists")
-#     print("Contents:", os.listdir(yolo_path))
-# else:
-#     print(f"🚨 {yolo_path} does NOT exist")
-
-
-# yolo_path = "./yolov5"
-# if os.path.exists(yolo_path):
-#     print(f"✅ {yolo_path} exists")
-#     print("Contents:", os.listdir(yolo_path))
-# else:
-#     print(f"🚨 {yolo_path} does NOT exist")
-
-
-# yolo_path = "yolov5"
-# if os.path.exists(yolo_path):
-#     print(f"✅ {yolo_path} exists")
-#     print("Contents:", os.listdir(yolo_path))
-# else:
-#     print(f"🚨 {yolo_path} does NOT exist")
-
-
-# from models.common import DetectMultiBackend  # YOLOv5용 모델 로드 방식
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})  # This will automatically add the header "Access-Control-Allow-Origin: *" to every response
@@ -106,14 +35,11 @@ class A_Circle_Arm():
         )
 
         self.collision_detected = False
-        # self.model = YOLO("/home/addinedu/venv/mp_venv/best.pt")
-        # self.model = YOLO("/app/shared_folder/best.pt")
-
-        # self.model = DetectMultiBackend("/app/shared_folder/best_robot.pt")
         self.model = YOLO("best_robot.pt")
 
         self.mp_hands = mp.solutions.hands
         self.cap = cv2.VideoCapture(0)
+        self.ice_cream_taken = False
         print("[INFO] Camera initialized for collision detection.")
 
 
@@ -421,9 +347,6 @@ class A_Circle_Arm():
 
         print(f"[INFO] Path '{act}' completed.")
 
-
-        
-
     def _turn_cup(self, angle):
         # 6번 모터 +360 ~ -360 까지.
         cur_6_motor_angle = self.arm.get_servo_angle(servo_id=6)
@@ -608,10 +531,25 @@ class A_Circle_Arm():
         self._move_one_path("under_press_to_person")  # 사람에게 전달
         time.sleep(5)  # 잠시 대기
         self._move_one_path("just_give")  # 아이스크림 전달
+        
 
-        if True:   # 아이스크림을 가져갔다면 ====> 여기서 '아이스크림을 사람이 가져갔다' 라는 정보가 입력되어야 하는데, 어떤 식으로 구현해야 할지 모르겠습니다..
-            self._move_one_path("person_to_press_retrieve") # 바로 프레스로 이동
+        start_time = time.time()
 
+        while time.time() - start_time < 10:
+            try:
+                response = requests.get('http://control_service:8080/check_ice_cream_status', timeout=5)
+                if response.json()['ice_cream_taken']:
+                    self.ice_cream_taken = True
+                    break
+            except Exception as e:
+                print(f"Error checking ice cream status: {e}")
+            time.sleep(0.5)
+            print("waiting for ice cream taken....", flush=True)
+            
+            if self.ice_cream_taken:   # 아이스크림을 가져갔다면 ====> 여기서 '아이스크림을 사람이 가져갔다' 라는 정보가 입력되어야 하는데, 어떤 식으로 구현해야 할지 모르겠습니다..
+                self._move_one_path("person_to_press_retrieve") # 바로 프레스로 이동
+                break
+            
         else:      # 아이스크림을 안 가져갔다면
             self._move_one_path("put_on_ice_1")  # 아이스크림 위치에 올리기
             self._move_one_path("ice_1_to_press_retrieve")  # 그 후 프레스로 이동
@@ -630,10 +568,27 @@ class A_Circle_Arm():
         self.arm.set_cgpio_analog(0, 0)
         time.sleep(3)"""
 
- 
+
+my_arm = A_Circle_Arm("192.168.1.182", app)
+
+@app.route('/ice_cream_taken', methods=['POST'])
+def ice_cream_taken_handler():
+    data = request.get_json()
+    print(data)
+    if data['status'] == "taken":
+        my_arm.ice_cream_taken = True
+        print("Ice cream taken status received")
+        return jsonify({"message": "Ice cream taken status received"}), 200
+    else:
+        my_arm.ice_cream_taken = False
+        print("Ice cream not taken status received")
+        return jsonify({"message": "XXXXX Ice cream not taken status received"}), 200
+@app.route('/check_ice_cream_status', methods=['GET'])
+def check_ice_cream_status():
+    return jsonify({"ice_cream_taken": my_arm.ice_cream_taken}), 200
+
 if __name__ == "__main__":
 
-    my_arm = A_Circle_Arm("192.168.1.182", app)
 
     # Run Flask server
     app.run(host='0.0.0.0', port=8080, threaded=True)
