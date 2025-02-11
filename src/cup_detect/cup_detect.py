@@ -71,6 +71,7 @@ class CupBoundaryDetector:
         self.model = None
         try:
             # self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='custom_data/cup_detect_coco_finetune/weights/best.pt')
+            torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
             self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='/app/shared_folder/best.pt')
             self.model.eval()  # Set model to evaluation mode
         except Exception as e:
