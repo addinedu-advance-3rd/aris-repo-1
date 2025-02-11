@@ -75,10 +75,18 @@ class FaceRecognitionSystem:
         self.pending_input = False
         self.pending_face_data = None
         self.new_user_name = None
+        self.no_match_start_time = None
+        
+        #여기 나이 성별 추가
+        self.user_age = "Unknown"
+        self.user_gender = "Unknown"
 
         # Load existing embeddings from JSON
         self.load_embeddings_from_folder()
         self.load_embeddings_from_db()
+
+        #캠 종료 플래그
+        self.completed_status = None  # "matched" 또는 "no_match"
 
     def load_embeddings_from_folder(self):
         """Load face embeddings + metadata from the folder's JSON file."""
@@ -168,6 +176,10 @@ class FaceRecognitionSystem:
                 gender = max(gender_prob, key=gender_prob.get)
             else:
                 gender = analysis.get('gender', 'Unknown')
+            
+            #여기 나이 성별 분석 결과 저장
+            self.set_user_age(age)
+            self.set_user_gender(gender)
             return age, gender
         except Exception as e:
             print(f"DeepFace error: {e}")
@@ -206,6 +218,31 @@ class FaceRecognitionSystem:
     def get_recognized_user(self) -> str:
         with self.lock:
             return self.recognized_user
+    #여기 나이 성별 추가
+    def set_user_age(self, age):
+        with self.lock:
+            self.user_age = age
+
+    def get_user_age(self):
+        with self.lock:
+            return self.user_age
+
+    def set_user_gender(self, gender):
+        with self.lock:
+            self.user_gender = gender
+
+    def get_user_gender(self):
+        with self.lock:
+            return self.user_gender
+
+    #캠종료 속성 확인 후 반환하는 함수
+    def set_completed_status(self, status: str):
+        with self.lock:
+            self.completed_status = status
+
+    def get_completed_status(self) -> str:
+        with self.lock:
+            return self.completed_status
 
     def save_new_face_and_embedding(self, embedding, face_image, user_name):
         """
@@ -361,6 +398,7 @@ def video():
     return Response(stream_video(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 def stream_video():
+    face_system.set_completed_status(None)  # 캠 시작 시 초기화
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 600)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -370,6 +408,8 @@ def stream_video():
         return  # Or yield nothing
     
     recognized_time = None  # ✅ 변수 초기화 추가
+    matched_user = None  # 현재 매칭된 사용자 변수 추가
+    no_match_start_time = None #노 매치 상태 시작 시간
 
     # simple timing for recognized user
     while True:
@@ -380,27 +420,34 @@ def stream_video():
 
         processed_frame, user_name, new_face = face_system.process_frame(frame)
         
-        # If recognized
-        if user_name is not None:
-            if face_system.get_recognized_user() is None:
-                face_system.set_recognized_user(user_name)
-                face_system.set_user_status("Recognized")
-                recognized_time = time.time()
+        #매칭 상태 처리
+        if user_name is not None and user_name != "new" : #기존 사용자 매칭
+            if matched_user is None:
+                matched_user = user_name
+                recognized_time = time.time()  # 매칭 시간 기록
+                no_match_start_time = None # 노매치 타이머 초기화
                 print(f"Welcome, {user_name}. 3 seconds to exit...", flush=True)
 
-            # After 3 seconds, break
-            if face_system.get_recognized_user() == user_name and recognized_time is not None and (time.time() - recognized_time) > 3:
+            # 3초 후 종료 조건
+            if matched_user == user_name and recognized_time is not None and (time.time() - recognized_time) > 3:
                 print(f"Goodbye, {user_name}. Exiting stream...", flush=True)
+                face_system.set_completed_status("matched") # 종료 플래그
                 break
 
-        else:
-            # reset recognized user if no match
-            face_system.set_recognized_user(None)
-            face_system.set_user_status("Unknown")
-
-        # If new face is detected, could do additional logic or let user input name from the front-end
-        # This is the place to set face_system.pending_input = True if you want to enforce it in code
-        # But we'll rely on the /submit_name route for that.
+        else: # 노매치
+            #매칭 되지 않은 상태일 경우
+            if no_match_start_time is None:
+                no_match_start_time = time.time()
+            
+            # 2초 이상 노매치 상태 유지 시 종료
+            if no_match_start_time and (time.time() - no_match_start_time > 2):
+                print("No face match for 2 seconds. Exiting stream...", flush=True)
+                face_system.set_completed_status("no_match")
+                break
+            
+            # 매칭된 사용자가 없을 경우 상태 초기화
+            matched_user = None
+            recognized_time = None
 
         ret2, buffer = cv2.imencode('.jpg', processed_frame)
         if not ret2:
@@ -411,6 +458,7 @@ def stream_video():
                b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n\r\n')
 
     cap.release()
+    cv2.destroyAllWindows()
 
 @app.route('/submit_name', methods=['POST'])
 def submit_name():
@@ -450,8 +498,17 @@ def check_user():
         return '', 204  # ✅ OPTIONS 요청에 대한 응답 추가
 
 
-    return jsonify({"user_status": face_system.get_user_status(), 
-                    "recognized_user": face_system.get_recognized_user()})
+    # 캠이 돌고 있는 동안 completed_status가 None이라면 기본값 반환
+    current_status = face_system.get_completed_status() 
+
+    #여기부터 추가
+    return jsonify({
+        "user_status": face_system.get_user_status(), 
+        "recognized_user": face_system.get_recognized_user(),
+        "age": face_system.get_user_age(),
+        "gender" : face_system.get_user_gender(),
+        "completed_status": face_system.get_completed_status()  # 종료 상태 추가
+    })
 
 
 
