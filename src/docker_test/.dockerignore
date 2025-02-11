@@ -2,3 +2,13 @@
 .git
 node_modules
 *.log
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.log
+*.log.*
+*.log.*.*
+*.log.*.*.*
+*.log.*.*.*.*
+*.log.*.*.*.*.*
