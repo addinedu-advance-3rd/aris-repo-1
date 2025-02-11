@@ -12,7 +12,6 @@ import subprocess
 import sys
 import subprocess
 
-torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
 
 
 app = Flask(__name__)
@@ -311,14 +310,27 @@ def stream_video():
     print("VIDEO RECORDING AND SAVING DONE", flush=True)
     convert_to_mp4()
     # video_recording_done()
-
-
-
 # request post video recording done 
+
+def notify_control_service():
+    print("notify_control_service", flush=True)
+    url = 'http://control_service:8080/ice_cream_taken'
+    payload = {"status": "taken"}
+    headers = {'Content-Type': 'application/json'}
+    try:
+        print("notify_control_service_try", flush=True)
+        response = requests.post(url, json=payload, timeout=5)
+        response.raise_for_status()  # Raise an error if the status is not 200-299
+        print("Successfully sent done status to Node.js GUI container.", flush=True)
+    except Exception as e:
+        print(f"Error sending done status: {e}", flush=True)
+
 
 def convert_to_mp4(input_file="output.avi", output_file="/app/video_src/output.mp4"):
     """Converts AVI file to MP4 using FFmpeg"""
     try:
+        # 컵 가져감 이벤트 발생 시 컨트롤 서비스에 알림
+        notify_control_service()
         output_dir =  os.path.dirname(output_file)
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)

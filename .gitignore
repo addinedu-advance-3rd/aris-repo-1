@@ -10,3 +10,16 @@ src/gui/main/video_src/*.mp4
 # (Optional) Ignore all .h5 files in the weights directory
 src/face_detect/weights/*.h5
 node_modules
+
+# Ignore all .pyc files
+*.pyc
+
+
+# ignore pycache
+__pycache__
+# Ignore all .log files
+*.log
+
+*.avi
+*.mp4
+*.webm

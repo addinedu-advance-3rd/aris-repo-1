@@ -14,27 +14,9 @@ RUN apt-get update && apt-get install -y \
     git
 
 
-# 2️⃣ YOLOv5 다운로드 (기존 캐시 제거 후 강제 다운로드)
-RUN git clone --depth 1 https://github.com/ultralytics/yolov5.git /app/yolov5
-    # 2️⃣ YOLOv5 패키지 설치 (pip install .)
-
-# 2️⃣ YOLOv5 디렉토리 확인 (디버깅)
-RUN echo "🔍 YOLOv5 디렉토리 구조:" && ls -l /app/yolov5 && \
-    echo "🔍 현재 작업 디렉토리:" && pwd
-
-
-# 3️⃣ YOLOv5 폴더 확인 (디버깅용)
-RUN ls -l /app/yolov5 || echo "🚨 YOLOv5 다운로드 실패"
-
 
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
-
-
-RUN pip list | grep yolov5 || echo "YOLOv5 설치 안됨"
-RUN python -c "import yolov5" || echo "YOLOv5 import 실패"
-    
-
 
 # 필요한 추가 패키지 설치
 
