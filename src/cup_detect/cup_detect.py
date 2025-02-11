@@ -70,7 +70,8 @@ class CupBoundaryDetector:
         self.cap = None
         self.model = None
         try:
-            self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='custom_data/cup_detect_coco_finetune/weights/best.pt')
+            # self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='custom_data/cup_detect_coco_finetune/weights/best.pt')
+            self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='/app/shared_folder/best.pt')
             self.model.eval()  # Set model to evaluation mode
         except Exception as e:
             print(f"Failed to load model: {e}")

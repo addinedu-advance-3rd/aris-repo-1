@@ -26,10 +26,13 @@ services:
       - ENV_VAR_NAME=value  # 필요한 환경 변수 추가 (예시)
     expose:
       - "8080"
+    restart : always
     volumes:
       - ./src/control:/app  # 로컬 파일과 컨테이너 파일 매핑
+      - shared_folder:/app/shared_folder
     networks:
         - mynet
+      
 
   face_detect:
     build:
@@ -90,6 +93,7 @@ services:
     volumes:
       - ./src/cup_detect:/app  # 로컬 파일과 컨테이너 파일 매핑
       - shared_video:/app/video_src
+      - shared_folder:/app/shared_folder
     runtime: nvidia  # GPU 사용 (그래픽카드 없는 경우 대응 위해 주석 처리)
     environment:
       - NVIDIA_VISIBLE_DEVICES=0  # GPU 0 사용 (첫 번째 GPU)
@@ -109,6 +113,8 @@ services:
 volumes:
   shared_video: 
     name : shared_video
+  shared_folder:
+    name : shared_folder
 
 networks:
   mynet : 

@@ -22,6 +22,8 @@ RUN pip install --upgrade pip && \
 
 # Copy source code
 COPY . /app/
+COPY ./custom_data/cup_detect_coco_finetune/weights/best.pt /app/shared_folder
+
 
 # Default command
 CMD ["python", "cup_detect.py"]

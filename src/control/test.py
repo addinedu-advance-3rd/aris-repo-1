@@ -4,10 +4,84 @@ import time
 import cv2
 import numpy as np
 from ultralytics import YOLO
+# from yolov5 import YOLO  # YOLO 모델 로드
 import mediapipe as mp
 import threading
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+# YOLOV5_PATH = "/app/yolov5"
+# if os.path.exists(YOLOV5_PATH):
+#     sys.path.append(YOLOV5_PATH)
+
+# print("현재 경로", os.path.dirname(os.path.abspath(__file__)))
+# print(os.path.dirname(os.path.abspath(__file__)))
+# print(os.getcwd())
+# print(sys.path)
+# print("현재 경로", os.path.dirname(os.path.abspath(__file__)))
+
+
+# sys.path.insert(0, './yolov5')
+# sys.path.insert(0, '/app/yolov5')
+# sys.path.insert(0, 'yolov5')
+
+
+# sys.path.append("/app/yolov5")  # YOLOv5 경로 추가
+# sys.path.append("yolov5")  # YOLOv5 경로 추가
+# sys.path.append("./yolov5")  # YOLOv5 경로 추가
+# if os.path.exists("./yolov5"):
+#     print("./YOLOv5 폴더가 존재.", flush=True)
+# if not os.path.exists("./yolov5"):
+#     print("./YOLOv5 폴더가 존재하지 않습니다.", flush=True)
+#     # raise FileNotFoundError("🚨 YOLOv5 폴더가 존재하지 않습니다! Dockerfile에서 복사 또는 설치를 확인하세요.")
+#     # raise FileNotFoundError("🚨 YOLOv5 폴더가 존재하지 않습니다! Dockerfile에서 복사 또는 설치를 확인하세요.")
+
+# if os.path.exists("/app/yolov5"):
+#     print("/app/YOLOv5 폴더가 존재.", flush=True)
+# if not os.path.exists("/app/yolov5"):
+#     print("/app/YOLOv5 폴더가 존재하지 않습니다.", flush=True)
+
+# if os.path.exists("yolov5"):
+#     print("yolov5 폴더가 존재.", flush=True)
+# if not os.path.exists("yolov5"):
+#     print("yolov5 폴더가 존재하지 않습니다.", flush=True)
+
+
+
+# sys.path.append("/app/yolov5")
+# print(sys.path)
+# print("현재 경로", os.path.dirname(os.path.abspath(__file__)))
+# print(os.path.dirname(os.path.abspath(__file__)))
+# print(os.getcwd())
+# print(sys.path)
+# print("현재 경로", os.path.dirname(os.path.abspath(__file__)))
+
+
+
+# yolo_path = "/app/yolov5"
+# if os.path.exists(yolo_path):
+#     print(f"✅ {yolo_path} exists")
+#     print("Contents:", os.listdir(yolo_path))
+# else:
+#     print(f"🚨 {yolo_path} does NOT exist")
+
+
+# yolo_path = "./yolov5"
+# if os.path.exists(yolo_path):
+#     print(f"✅ {yolo_path} exists")
+#     print("Contents:", os.listdir(yolo_path))
+# else:
+#     print(f"🚨 {yolo_path} does NOT exist")
+
+
+# yolo_path = "yolov5"
+# if os.path.exists(yolo_path):
+#     print(f"✅ {yolo_path} exists")
+#     print("Contents:", os.listdir(yolo_path))
+# else:
+#     print(f"🚨 {yolo_path} does NOT exist")
+
+
+# from models.common import DetectMultiBackend  # YOLOv5용 모델 로드 방식
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})  # This will automatically add the header "Access-Control-Allow-Origin: *" to every response
@@ -32,10 +106,16 @@ class A_Circle_Arm():
         )
 
         self.collision_detected = False
-        self.model = YOLO("/home/addinedu/venv/mp_venv/best.pt")
+        # self.model = YOLO("/home/addinedu/venv/mp_venv/best.pt")
+        # self.model = YOLO("/app/shared_folder/best.pt")
+
+        # self.model = DetectMultiBackend("/app/shared_folder/best_robot.pt")
+        self.model = YOLO("best_robot.pt")
+
         self.mp_hands = mp.solutions.hands
         self.cap = cv2.VideoCapture(0)
         print("[INFO] Camera initialized for collision detection.")
+
 
 
         if self.arm:
