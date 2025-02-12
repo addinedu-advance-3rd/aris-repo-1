@@ -8,10 +8,18 @@ WORKDIR /app
 COPY requirements.txt /app/
 
 # pip를 최신 버전으로 업그레이드 후 의존성 설치
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    git
+
+
+
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # 필요한 추가 패키지 설치
+
 # RUN apt-get update -y && \
 #     apt-get install -y libgl1-mesa-glx libglib2.0-0 && \
 #     rm -rf /var/lib/apt/lists/*
