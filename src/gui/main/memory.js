@@ -25,9 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (data.status === "end_ice") {
           // 제조 완료 상태일 때 페이지 전환
-          cookingPage.classList.add('hidden');  // 랜딩 페이지 숨기기
-          mainPage.classList.remove('hidden');  // 메인 페이지 표시
-
           //페이지 전환 후 캠 띄우기
           setTimeout(() => {
           
@@ -83,31 +80,6 @@ document.addEventListener("DOMContentLoaded", function () {
   resetRecordingStatus();
 });
 
-<<<<<<< HEAD
-=======
-
-function stopCamera() {
-  fetch(`${NGROK_BASE_URL}/cup/stop_camera`, {
-    method: 'POST',
-  })
-  .then(response => response.json())
-  .then(data => {
-    console.log("🔄 Camera stopped:", data);
-  })
-  .catch(error => {
-    console.error("⚠️ Error stopping camera:", error);
-  });
-}
-
-window.addEventListener("beforeunload", function () {
-  stopCamera();
-});
-
-
-
-
-
->>>>>>> develop
 // ✅ Fetch the latest video recording status
 function fetchRecordingStatus() {
   const timestamp = new Date().getTime();
@@ -136,41 +108,15 @@ function fetchRecordingStatus() {
 }
 
 // Call this function periodically or on user interaction
-<<<<<<< HEAD
 setInterval(fetchRecordingStatus, 1000); // Fetch status every 5 seconds
 
 // 스트리밍 이미지 설정 함수
-=======
-setInterval(fetchRecordingStatus, 2000); // Fetch status every 2 seconds
-
-
-
->>>>>>> develop
 
 function setStreamImage() {
   const img_container_element = document.getElementById('image-container');
   let imgElement = document.getElementById('cup_detect_stream'); // 기존 img 태그 가져오기
   let test_p = document.getElementById('test_p');
   // 기존 이미지 태그가 없으면 새로 생성
-  if (true) {
-  // if (!imgElement) {
-    imgElement = document.createElement('img');
-    test_p = document.createElement('p');
-    test_p.textContent = "test";
-    test_p.style.display = 'block';
-    test_p.style.position = 'absolute';
-    test_p.style.top = '0';
-    test_p.style.left = '0';
-    test_p.style.width = '100%';
-    test_p.style.height = '100%';
-    test_p.style.backgroundColor = 'red';
-    imgElement.id = 'cup_detect_stream'; // ID 설정 (다음 실행 때 찾을 수 있도록)
-    imgElement.alt = "Cup Detection Stream";
-    imgElement.style.maxWidth = "100%"; // 스타일 설정 (선택적)
-    img_container_element.appendChild(imgElement);
-    img_container_element.appendChild(test_p); 
-    console.log("✅ element 생성!");
-  }
 
   const streamURL = `${NGROK_BASE_URL}/cup/video`;
 
@@ -181,7 +127,26 @@ function setStreamImage() {
   // 이미지 로드 성공/실패 확인
   imgElement.onload = () => {
     console.log("✅ 캠 스트림 로드 완료!");
+
+    console.log("H1 element:", document.querySelector("#main-page h1"));
+    console.log("Before removing hidden:", document.getElementById('main-page').classList);
+    document.getElementById('main-page').classList.remove('hidden');
+    document.getElementById('main-page').classList.add('show-main');
+    console.log("After removing hidden:", document.getElementById('main-page').classList);
+    console.log("Main page visibility:", window.getComputedStyle(document.getElementById('main-page')).display);
+    console.log("Main page opacity:", window.getComputedStyle(document.getElementById('main-page')).opacity);
+    console.log("Main page visibility:", window.getComputedStyle(document.getElementById('main-page')).visibility);
+    const cookingPage = document.getElementById('cooking');
+    const mainPage = document.getElementById('main-page');
+  
+    cookingPage.classList.add('hidden');  // 랜딩 페이지 숨기기
+    mainPage.classList.remove('hidden');  // 메인 페이지 표시
+
+
+
+
     imgElement.style.display = 'block';
+    imgElement.style.opacity = '1';
   }
     
   imgElement.onerror = () => console.error("❌ 캠 스트림 로드 실패! URL을 확인하세요.");

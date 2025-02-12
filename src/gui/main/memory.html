@@ -23,13 +23,13 @@
     }
 
     /* 랜딩 페이지 (아이스크림 제조 중) */
-    .cooking-container {
+    /* .cooking-container {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       position: relative;
-    }
+    } */
 
     h1 {
       font-size: 3em;
@@ -43,12 +43,12 @@
     }
 
     /* 아이스크림 메인 애니메이션 */
-    .big-ice-cream {
+    /* .big-ice-cream {
       width: 150px;
       height: 200px;
-      background: url('https://i.imgur.com/ldR8s6X.png') no-repeat center/contain;
+      /* background: url('https://i.imgur.com/ldR8s6X.png') no-repeat center/contain; */
       animation: shake 0.4s infinite alternate ease-in-out, rotateIce 2s infinite linear;
-    }
+    /* } */ */
 
     #image-container {
       display: flex;
@@ -70,14 +70,14 @@
     }
 
     /* 배경 작은 아이스크림 */
-    .small-ice-cream {
+    /* .small-ice-cream {
       position: absolute;
       width: 50px;
       height: 70px;
       background: url('https://i.imgur.com/ldR8s6X.png') no-repeat center/contain;
       opacity: 0.8;
       animation: float 3s infinite ease-in-out alternate;
-    }
+    } */
 
     /* 랜덤한 위치에서 떠다니는 애니메이션 */
     .small-ice-cream:nth-child(1) { top: 10%; left: 20%; animation-duration: 2.5s; }
@@ -104,6 +104,12 @@
 
     .hidden {
       display: none;
+    }
+
+    .show-main {
+      display: flex !important;
+      opacity: 1 !important;
+      visibility: visible !important;
     }
   </style>
 </head>
