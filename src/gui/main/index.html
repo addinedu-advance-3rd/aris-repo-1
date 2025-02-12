@@ -39,8 +39,25 @@
       }
     }
 
+    #main {
+      position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  z-index: 1; /* 배경보다 앞에 오도록 */
+    }
+
     /* 콘텐츠용 컨테이너 (랜딩, 메인 페이지) */
     .content-container {
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      height: 100vh;
+/*       
       position: relative;
       display: flex;
       flex-direction: column;
@@ -48,7 +65,7 @@
       justify-content: center;
       text-align: center;
       padding: 20px;
-      min-height: 100vh;
+      min-height: 100vh; */
     }
     .hidden {
       /* display: none; */
@@ -67,6 +84,7 @@
       cursor: pointer;
       transition: background-color 0.3s ease;
       margin-top: 20px;
+      z-index: 2;
     }
     button:hover {
       background-color: #ff3b2e;
@@ -102,6 +120,8 @@ body {
   margin:0
 }
 .logo {
+  max-width: 100vw;
+  font-size: clamp(1rem, 2vw, 2rem);
   text-align: center;
   width: 80%;
   height: 250px;
@@ -168,6 +188,12 @@ body {
     text-shadow: inherit;
   }
 }
+
+/* #main {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+} */
+
 
 
   </style>
