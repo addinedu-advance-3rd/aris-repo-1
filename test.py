@@ -35,7 +35,6 @@ class A_Circle_Arm():
 
     def __init__(self, arm_ip, app):
         if not hasattr(self, "initialized"):
-            self.end_check_point = False
             self.arm_ip = arm_ip
             self.app = app
             self.ice_cream_taken = False
@@ -53,12 +52,21 @@ class A_Circle_Arm():
 
             self.collision_detected = False
             self.model = YOLO("best_robot.pt")
-            self.position = YOLO("best_seal.pt", verbose=False)  # ===> 경로 수정 필요
+            self.position = YOLO("/home/addinedu/venv/mp_venv/best_seal.pt")  # ===> 경로 수정 필요합니다!
 
             self.mp_hands = mp.solutions.hands
             self.cap = cv2.VideoCapture(0)
             print("[INFO] Camera initialized for collision detection.")
             self.initialized = True
+
+            # 충돌 감지 관련 멀티스레드
+            collision_thread = threading.Thread(target=self.detect_collision, daemon=True)
+            collision_thread.start()
+
+            collision_handler_thread = threading.Thread(target=self.check_collision_and_pause, daemon=True)
+            collision_handler_thread.start()
+
+
 
 
             if self.arm:
@@ -200,7 +208,6 @@ class A_Circle_Arm():
                        "ice_1_to_in_press_retrieve": [33, 34, 41, 43, 44, 45],
                        "ice_2_to_in_press_retrieve": [36, 37, 41, 43, 44, 45],
                        "ice_3_to_in_press_retrieve": [39, 40, 41, 43, 44, 45],
-                       "person_to_press_retrieve": [16, 43, 44, 45],
                        "press_to_waste": [45, 31, 30, 29],
                        "return_to_default": [29, 30, 44, 43, 46, 47, 17], 
                        "return_to_default_direct": [46, 47, 17],
@@ -288,22 +295,17 @@ class A_Circle_Arm():
                                 self.running = False
                                 #cv2.destroyWindow("Sealing Check")
                                 self.cap.release()
-                                # cv2.waitKey(1)
+                                cv2.waitKey(1)
                                 print("[INFO] 실링 감지 완료.")
-                                # 충돌 감지 관련 멀티스레드
-                                collision_thread = threading.Thread(target=self.detect_collision, daemon=True)
-                                collision_thread.start()
-
-                                collision_handler_thread = threading.Thread(target=self.check_collision_and_pause, daemon=True)
-                                collision_handler_thread.start()
+                                
                                 return self.position  # 1, 2, 3 중 하나 반환
                                 
             # 'q' 키를 누르면 종료
-            # if cv2.waitKey(1) & 0xFF == ord('q'):
-            #     break
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
         self.cap.release()
-        # cv2.waitKey(1)
+        cv2.waitKey(1)
             
 
     def _find_closest_ice(self, x, y):
@@ -315,6 +317,22 @@ class A_Circle_Arm():
         }
         closest_ice = min(ice_positions.keys(), key=lambda k: np.linalg.norm(np.array([x, y]) - np.array(ice_positions[k])))
         return closest_ice
+
+
+    def check_collision_and_pause(self):
+        """충돌이 감지되면 로봇을 멈추고, 충돌이 해제될 때까지 대기"""
+        while 1:
+            if self.collision_detected:
+                print("[WARNING] Collision detected! Pausing motion")
+                self.arm.set_state(state=3)  # 3: Pause state (정지)
+                time.sleep(2)
+                
+            else:
+                print("[INFO] Collision cleared. Resuming motion")
+                self.arm.set_state(state=0)  # 0: Resume motion (재개)
+
+            time.sleep(0.1)
+
 
 
     def check_collision_and_pause(self):
@@ -351,7 +369,7 @@ class A_Circle_Arm():
                     print("[ERROR] 기존 카메라에서 프레임을 읽을 수 없음!")
                     break
 
-                results = self.model(frame, task="segment", conf=0.25, verbose=False)
+                results = self.model(frame, task="segment", conf=0.25)
                 robot_masks = []
                 for result in results:
                     if result.masks is not None:
@@ -385,7 +403,7 @@ class A_Circle_Arm():
 
                 # 🔹 손이 감지되지 않거나 충돌이 없을 경우
                 else:
-                    # print("Keep going")
+                    print("Keep going")
                     if self.last_no_collision_time is None:  
                         self.last_no_collision_time = time.time()  # 최초 충돌이 없는 순간 기록
 
@@ -400,11 +418,11 @@ class A_Circle_Arm():
 
 
 
-                # cv2.imshow("Robot Arm & Hand Tracking", frame)
+                cv2.imshow("Robot Arm & Hand Tracking", frame)
 
-                # # 'q' 키를 누르면 종료
-                # if cv2.waitKey(1) & 0xFF == ord('q'):
-                #     break      
+                # 'q' 키를 누르면 종료
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break      
 
 
 
@@ -540,7 +558,7 @@ class A_Circle_Arm():
         self.cap.release()
         self.cap = None
         self.cap = cv2.VideoCapture(0)
-        # cv2.waitKey(1)
+        cv2.waitKey(1)
 
         # 아이스크림 위치 번호 출력 (추후 동작 제어는 따로 처리)
         print(f"[INFO] 최종 반환된 위치 번호: {detected_position}")
@@ -691,13 +709,7 @@ class A_Circle_Arm():
         self._move_one_path("topping_to_under_press")  # 후속 동작 이동
         self.arm.set_cgpio_digital(3,1)
         time.sleep(12)
-        self.arm.set_cgpio_digital(3,0) 
-        
-        
-        ### -> 나가기 대충 5초전 플래그 여기 걸기 여기
-        self.end_check_point = True  
-        ###
-
+        self.arm.set_cgpio_digital(3,0)
         self._move_one_path("under_press_to_person")  # 사람에게 전달
         time.sleep(5)  # 잠시 대기
         self._move_one_path("just_give")  # 아이스크림 전달
@@ -709,7 +721,7 @@ class A_Circle_Arm():
             try:
                 response = requests.get('http://control_service:8080/check_ice_cream_status', timeout=5)
                 if response.json()['ice_cream_taken']:
-                    self.ice_cream_taken = Trume
+                    self.ice_cream_taken = True
                     break
             except Exception as e:
                 print(f"Error checking ice cream status: {e}")
@@ -718,14 +730,12 @@ class A_Circle_Arm():
             
             if self.ice_cream_taken:   # 아이스크림을 가져갔다면 ====> 여기서 '아이스크림을 사람이 가져갔다' 라는 정보가 입력되어야 하는데, 어떤 식으로 구현해야 할지 모르겠습니다..
                 self._move_one_path("person_to_press_retrieve") # 바로 프레스로 이동
-                self._grap(False)  # 그랩 해제
                 break
             
         else:      # 아이스크림을 안 가져갔다면
             print("아이스크림을 안 가져갔다면", flush=True)
             self._move_one_path("put_on_ice_1")  # 아이스크림 위치에 올리기
-            self._move_one_path("ice_1_to_in_press_retrieve")  # 그 후 프레스로 이동
-            self._grap(False)  # 그랩 해제
+            self._move_one_path("ice_1_to_press_retrieve")  # 그 후 프레스로 이동
         
         self._grap(True)  # 다시 그랩
         print("아이스크림 버리는 위치로 이동", flush=True)
@@ -763,29 +773,8 @@ def check_ice_cream_status():
     arm = A_Circle_Arm.get_instance() # 싱글톤 인스턴스 가져오기
     return jsonify({"ice_cream_taken": arm.ice_cream_taken}), 200
 
-#메모리페이지한테 제조 상태 알려주기 
-@app.route('/check_end_status', methods=['GET'])
-def check_end_status():
-    try:
-        arm = A_Circle_Arm.get_instance()  # 싱글톤 인스턴스 가져오기
-        return jsonify({"status": "end_ice"}), 200 # 테스트
-        '''
-        if arm is None:
-            print("❌ A_Circle_Arm 인스턴스가 None입니다.", flush=True)
-            return jsonify({"error": "A_Circle_Arm instance is None"}), 500
-
-        if not hasattr(arm, "end_check_point"):
-            print("❌ end_check_point 속성이 없습니다.", flush=True)
-            return jsonify({"error": "end_check_point attribute not found"}), 500
-        
-        print(f"✅ end_check_point 상태: {arm.end_check_point}", flush=True)
-        return jsonify({"status": "end_ice" if arm.end_check_point else "processing"}), 200
-        '''
-
-    except Exception as e:
-        print(f"🔥 /check_end_status 오류 발생: {e}", flush=True)
-        return jsonify({"error": str(e)}), 500
-
 if __name__ == "__main__":
+
+
     # Run Flask server
     app.run(host='0.0.0.0', port=8080, threaded=True)
