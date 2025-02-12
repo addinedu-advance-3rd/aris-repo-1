@@ -35,6 +35,7 @@ class A_Circle_Arm():
 
     def __init__(self, arm_ip, app):
         if not hasattr(self, "initialized"):
+            self.end_check_point = False
             self.arm_ip = arm_ip
             self.app = app
             self.ice_cream_taken = False
@@ -554,7 +555,13 @@ class A_Circle_Arm():
         self._move_one_path("topping_to_under_press")  # 후속 동작 이동
         self.arm.set_cgpio_digital(3,1)
         time.sleep(12)
-        self.arm.set_cgpio_digital(3,0)
+        self.arm.set_cgpio_digital(3,0) 
+        
+        
+        ### -> 나가기 대충 5초전 플래그 여기 걸기 여기
+        self.end_check_point = True  
+        ###
+
         self._move_one_path("under_press_to_person")  # 사람에게 전달
         time.sleep(5)  # 잠시 대기
         self._move_one_path("just_give")  # 아이스크림 전달
@@ -618,8 +625,29 @@ def check_ice_cream_status():
     arm = A_Circle_Arm.get_instance() # 싱글톤 인스턴스 가져오기
     return jsonify({"ice_cream_taken": arm.ice_cream_taken}), 200
 
+#메모리페이지한테 제조 상태 알려주기 
+@app.route('/check_end_status', methods=['GET'])
+def check_end_status():
+    try:
+        arm = A_Circle_Arm.get_instance()  # 싱글톤 인스턴스 가져오기
+        return jsonify({"status": "end_ice"}), 200 # 테스트
+        '''
+        if arm is None:
+            print("❌ A_Circle_Arm 인스턴스가 None입니다.", flush=True)
+            return jsonify({"error": "A_Circle_Arm instance is None"}), 500
+
+        if not hasattr(arm, "end_check_point"):
+            print("❌ end_check_point 속성이 없습니다.", flush=True)
+            return jsonify({"error": "end_check_point attribute not found"}), 500
+        
+        print(f"✅ end_check_point 상태: {arm.end_check_point}", flush=True)
+        return jsonify({"status": "end_ice" if arm.end_check_point else "processing"}), 200
+        '''
+
+    except Exception as e:
+        print(f"🔥 /check_end_status 오류 발생: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
-
-
     # Run Flask server
     app.run(host='0.0.0.0', port=8080, threaded=True)
