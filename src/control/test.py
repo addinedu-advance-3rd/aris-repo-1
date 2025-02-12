@@ -53,21 +53,12 @@ class A_Circle_Arm():
 
             self.collision_detected = False
             self.model = YOLO("best_robot.pt")
-            self.position = YOLO("best_seal.pt")  # ===> 경로 수정 필요
+            self.position = YOLO("best_seal.pt", verbose=False)  # ===> 경로 수정 필요
 
             self.mp_hands = mp.solutions.hands
             self.cap = cv2.VideoCapture(0)
             print("[INFO] Camera initialized for collision detection.")
             self.initialized = True
-
-            # 충돌 감지 관련 멀티스레드
-            collision_thread = threading.Thread(target=self.detect_collision, daemon=True)
-            collision_thread.start()
-
-            collision_handler_thread = threading.Thread(target=self.check_collision_and_pause, daemon=True)
-            collision_handler_thread.start()
-
-
 
 
             if self.arm:
@@ -209,6 +200,7 @@ class A_Circle_Arm():
                        "ice_1_to_in_press_retrieve": [33, 34, 41, 43, 44, 45],
                        "ice_2_to_in_press_retrieve": [36, 37, 41, 43, 44, 45],
                        "ice_3_to_in_press_retrieve": [39, 40, 41, 43, 44, 45],
+                       "person_to_press_retrieve": [16, 43, 44, 45],
                        "press_to_waste": [45, 31, 30, 29],
                        "return_to_default": [29, 30, 44, 43, 46, 47, 17], 
                        "return_to_default_direct": [46, 47, 17],
@@ -296,17 +288,22 @@ class A_Circle_Arm():
                                 self.running = False
                                 #cv2.destroyWindow("Sealing Check")
                                 self.cap.release()
-                                cv2.waitKey(1)
+                                # cv2.waitKey(1)
                                 print("[INFO] 실링 감지 완료.")
-                                
+                                # 충돌 감지 관련 멀티스레드
+                                collision_thread = threading.Thread(target=self.detect_collision, daemon=True)
+                                collision_thread.start()
+
+                                collision_handler_thread = threading.Thread(target=self.check_collision_and_pause, daemon=True)
+                                collision_handler_thread.start()
                                 return self.position  # 1, 2, 3 중 하나 반환
                                 
             # 'q' 키를 누르면 종료
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            # if cv2.waitKey(1) & 0xFF == ord('q'):
+            #     break
 
         self.cap.release()
-        cv2.waitKey(1)
+        # cv2.waitKey(1)
             
 
     def _find_closest_ice(self, x, y):
@@ -336,22 +333,6 @@ class A_Circle_Arm():
 
 
 
-    def check_collision_and_pause(self):
-        """충돌이 감지되면 로봇을 멈추고, 충돌이 해제될 때까지 대기"""
-        while 1:
-            if self.collision_detected:
-                print("[WARNING] Collision detected! Pausing motion")
-                self.arm.set_state(state=3)  # 3: Pause state (정지)
-                time.sleep(2)
-                
-            else:
-                # print("[INFO] Collision cleared. Resuming motion")
-                self.arm.set_state(state=0)  # 0: Resume motion (재개)
-
-            time.sleep(0.1)
-
-
-
     def detect_collision(self):
         """손과 로봇팔의 충돌 감지를 수행"""
         self.last_no_collision_time = None  # 최근 충돌이 없었던 시간을 기록
@@ -370,7 +351,7 @@ class A_Circle_Arm():
                     print("[ERROR] 기존 카메라에서 프레임을 읽을 수 없음!")
                     break
 
-                results = self.model(frame, task="segment", conf=0.25)
+                results = self.model(frame, task="segment", conf=0.25, verbose=False)
                 robot_masks = []
                 for result in results:
                     if result.masks is not None:
@@ -404,7 +385,7 @@ class A_Circle_Arm():
 
                 # 🔹 손이 감지되지 않거나 충돌이 없을 경우
                 else:
-                    print("Keep going")
+                    # print("Keep going")
                     if self.last_no_collision_time is None:  
                         self.last_no_collision_time = time.time()  # 최초 충돌이 없는 순간 기록
 
@@ -419,11 +400,11 @@ class A_Circle_Arm():
 
 
 
-                cv2.imshow("Robot Arm & Hand Tracking", frame)
+                # cv2.imshow("Robot Arm & Hand Tracking", frame)
 
-                # 'q' 키를 누르면 종료
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break      
+                # # 'q' 키를 누르면 종료
+                # if cv2.waitKey(1) & 0xFF == ord('q'):
+                #     break      
 
 
 
@@ -559,7 +540,7 @@ class A_Circle_Arm():
         self.cap.release()
         self.cap = None
         self.cap = cv2.VideoCapture(0)
-        cv2.waitKey(1)
+        # cv2.waitKey(1)
 
         # 아이스크림 위치 번호 출력 (추후 동작 제어는 따로 처리)
         print(f"[INFO] 최종 반환된 위치 번호: {detected_position}")
@@ -728,7 +709,7 @@ class A_Circle_Arm():
             try:
                 response = requests.get('http://control_service:8080/check_ice_cream_status', timeout=5)
                 if response.json()['ice_cream_taken']:
-                    self.ice_cream_taken = True
+                    self.ice_cream_taken = Trume
                     break
             except Exception as e:
                 print(f"Error checking ice cream status: {e}")
@@ -737,12 +718,14 @@ class A_Circle_Arm():
             
             if self.ice_cream_taken:   # 아이스크림을 가져갔다면 ====> 여기서 '아이스크림을 사람이 가져갔다' 라는 정보가 입력되어야 하는데, 어떤 식으로 구현해야 할지 모르겠습니다..
                 self._move_one_path("person_to_press_retrieve") # 바로 프레스로 이동
+                self._grap(False)  # 그랩 해제
                 break
             
         else:      # 아이스크림을 안 가져갔다면
             print("아이스크림을 안 가져갔다면", flush=True)
             self._move_one_path("put_on_ice_1")  # 아이스크림 위치에 올리기
-            self._move_one_path("ice_1_to_press_retrieve")  # 그 후 프레스로 이동
+            self._move_one_path("ice_1_to_in_press_retrieve")  # 그 후 프레스로 이동
+            self._grap(False)  # 그랩 해제
         
         self._grap(True)  # 다시 그랩
         print("아이스크림 버리는 위치로 이동", flush=True)
