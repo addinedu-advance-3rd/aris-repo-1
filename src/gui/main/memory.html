@@ -89,13 +89,25 @@
     }
   </style>
 </head>
+
 <body>
-  <div class="bg-container"></div>
+  <!-- 랜딩 페이지(제조화면)-->
+  <div id ="cooking" class="content-container">
+    <h1>아이스크림이 제조 중 !</h1>
+    <p>잠시만 기다려 주세요 . . . </p>
+  </div>
+
+  <!-- <div class="bg-container"></div>
   
   <div class="content-container"> 
 
-    
-    <h1>Webcam Video Recorder</h1>
+     -->
+    <!-- 메인 페이지 -->
+    <div id="main-page" class="content-container hidden">
+      <h1>Webcam Video Recorder</h1>
+      <img id="cup_detect_stream" alt="cup_detect_stream" />
+      <p id="status"></p>
+    </div>
     
     <!-- 비디오 -->
     <!-- <video id="video" width="640" height="480" autoplay muted></video> -->
@@ -104,14 +116,15 @@
     <!-- <button id="start">촬영 시작</button> -->
 
 
-    <img id="cup_detect_stream" alt="cup_detect_stream" alt = "cup_detect_stream" />
+    <!-- <img id="cup_detect_stream" alt="cup_detect_stream" alt = "cup_detect_stream" /> -->
  
     
     <!-- 상태 메시지 -->
-    <p id="status"></p>
-  </div>
+    <!-- <p id="status"></p> -->
+  
 
-  <script type="module" src="memory.js"></script>
+    <script type="module" src = "memory.js">
+    </script>
   
 </body>
 </html>
