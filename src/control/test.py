@@ -630,7 +630,8 @@ def check_ice_cream_status():
 def check_end_status():
     try:
         arm = A_Circle_Arm.get_instance()  # 싱글톤 인스턴스 가져오기
-        
+        return jsonify({"status": "end_ice"}), 200 # 테스트
+        '''
         if arm is None:
             print("❌ A_Circle_Arm 인스턴스가 None입니다.", flush=True)
             return jsonify({"error": "A_Circle_Arm instance is None"}), 500
@@ -641,6 +642,7 @@ def check_end_status():
         
         print(f"✅ end_check_point 상태: {arm.end_check_point}", flush=True)
         return jsonify({"status": "end_ice" if arm.end_check_point else "processing"}), 200
+        '''
 
     except Exception as e:
         print(f"🔥 /check_end_status 오류 발생: {e}", flush=True)
