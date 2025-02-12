@@ -50,6 +50,13 @@
       animation: shake 0.4s infinite alternate ease-in-out, rotateIce 2s infinite linear;
     }
 
+    #image-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 200px;
+    }
+
     /* 흔들리는 효과 */
     @keyframes shake {
       0% { transform: rotate(-5deg) translateY(0px); }
@@ -119,6 +126,8 @@
   <div id="main-page" class="content-container hidden">
     <h1>Webcam Video Recorder</h1>
     <img id="cup_detect_stream" alt="cup_detect_stream" alt = "cup_detect_stream" />
+    <div id="image-container"></div>
+
     <p id="status"></p>
   </div>
 

@@ -30,8 +30,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
           //페이지 전환 후 캠 띄우기
           setTimeout(() => {
+          
             console.log("🚀 캠 활성화 시작");
-            setStreamImage();
+            console.log("📌 image-container 상태:", document.getElementById('image-container'));
+            console.log("📌 cup_detect_stream 상태:", document.getElementById('cup_detect_stream'));
+          
+          
+            console.log("🚀 캠 활성화 시작");
+            requestAnimationFrame( () => {
+              setTimeout(() => {
+                setStreamImage();
+              }, 500);
+            })
+            // 캠 스트림 시작
           }, 500); // 0.5초 후 실행
 
           clearInterval(statusCheckInterval);   // 주기적 상태 체크 중단
@@ -75,21 +86,46 @@ function fetchRecordingStatus() {
 setInterval(fetchRecordingStatus, 1000); // Fetch status every 5 seconds
 
 // 스트리밍 이미지 설정 함수
-function setStreamImage() {
-  const imgElement = document.getElementById('cup_detect_stream');
 
-  if (!imgElement) {
-    console.error("🚨 cup_detect_stream 요소를 찾을 수 없습니다! 페이지 로딩 문제?");
-    return;
+function setStreamImage() {
+  const img_container_element = document.getElementById('image-container');
+  let imgElement = document.getElementById('cup_detect_stream'); // 기존 img 태그 가져오기
+  let test_p = document.getElementById('test_p');
+  // 기존 이미지 태그가 없으면 새로 생성
+  if (true) {
+  // if (!imgElement) {
+    imgElement = document.createElement('img');
+    test_p = document.createElement('p');
+    test_p.textContent = "test";
+    test_p.style.display = 'block';
+    test_p.style.position = 'absolute';
+    test_p.style.top = '0';
+    test_p.style.left = '0';
+    test_p.style.width = '100%';
+    test_p.style.height = '100%';
+    test_p.style.backgroundColor = 'red';
+    imgElement.id = 'cup_detect_stream'; // ID 설정 (다음 실행 때 찾을 수 있도록)
+    imgElement.alt = "Cup Detection Stream";
+    imgElement.style.maxWidth = "100%"; // 스타일 설정 (선택적)
+    img_container_element.appendChild(imgElement);
+    img_container_element.appendChild(test_p); 
+    console.log("✅ element 생성!");
   }
 
-  console.log("✅ 캠 스트림 시작! URL:", `${NGROK_BASE_URL}/cup/video`);
-  imgElement.src = `${NGROK_BASE_URL}/cup/video`;
+  const streamURL = `${NGROK_BASE_URL}/cup/video`;
+
+  console.log("✅ 캠 스트림 시작! URL:", streamURL);
+  
+  imgElement.src = streamURL; // 스트림 URL 설정
 
   // 이미지 로드 성공/실패 확인
-  imgElement.onload = () => console.log("✅ 캠 스트림 로드 완료!");
+  imgElement.onload = () => {
+    console.log("✅ 캠 스트림 로드 완료!");
+    imgElement.style.display = 'block';
+  }
+    
   imgElement.onerror = () => console.error("❌ 캠 스트림 로드 실패! URL을 확인하세요.");
 }
 
-window.setStreamImage = setStreamImage;
+//  window.setStreamImage = setStreamImage;
 
