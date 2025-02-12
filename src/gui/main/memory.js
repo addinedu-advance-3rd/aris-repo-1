@@ -57,10 +57,61 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+function resetRecordingStatus() {
+  fetch(`${NGROK_BASE_URL}/gui/reset_video_recording_status`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache'
+    }
+  })
+    .then(response => response.json())
+    .then(data => {
+      console.log("🔄 Video recording status reset:", data);
+      setTimeout(() => {
+        fetchRecordingStatus(); // Reset 후 fetch 다시 실행
+      }, 1000);
+    })
+    .catch(error => {
+      console.error("⚠️ Error resetting video recording status:", error);
+    });
 
+}
+
+// ✅ memory.html 방문 시 실행
+document.addEventListener("DOMContentLoaded", function () {
+  resetRecordingStatus();
+});
+
+<<<<<<< HEAD
+=======
+
+function stopCamera() {
+  fetch(`${NGROK_BASE_URL}/cup/stop_camera`, {
+    method: 'POST',
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log("🔄 Camera stopped:", data);
+  })
+  .catch(error => {
+    console.error("⚠️ Error stopping camera:", error);
+  });
+}
+
+window.addEventListener("beforeunload", function () {
+  stopCamera();
+});
+
+
+
+
+
+>>>>>>> develop
 // ✅ Fetch the latest video recording status
 function fetchRecordingStatus() {
-  fetch(`${NGROK_BASE_URL}/gui/video_recording_status`)
+  const timestamp = new Date().getTime();
+  fetch(`${NGROK_BASE_URL}/gui/video_recording_status?timestamp=${timestamp}`)
     .then(response => response.json())
     .then(data => {
       console.log("📡 Video recording done status:", data);
@@ -68,8 +119,10 @@ function fetchRecordingStatus() {
 
       if (data.status === "done") {
         if (NGROK_BASE_URL === '') {
+          console.log("🔄 Video recording done status:", data);
           window.location.href = '/gui/play.html?video=' + encodeURIComponent(data.url);
         } else {
+          console.log("🔄 Video recording done status:", data);
           window.location.href = '/play.html?video=' + encodeURIComponent(data.url); // 토핑 선택 페이지로 이동
         }
 
@@ -83,9 +136,16 @@ function fetchRecordingStatus() {
 }
 
 // Call this function periodically or on user interaction
+<<<<<<< HEAD
 setInterval(fetchRecordingStatus, 1000); // Fetch status every 5 seconds
 
 // 스트리밍 이미지 설정 함수
+=======
+setInterval(fetchRecordingStatus, 2000); // Fetch status every 2 seconds
+
+
+
+>>>>>>> develop
 
 function setStreamImage() {
   const img_container_element = document.getElementById('image-container');

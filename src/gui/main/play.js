@@ -141,3 +141,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   
+
+
+  //  time out to redirect 10 se
+
+setTimeout(() => {
+  window.location.href = '/gui/';
+  console.log('Redirecting to /gui/ in 10 seconds...');
+}, 10000);
+
+
+const timer = document.getElementById('timer');
+let countdown = 5;  // ✅ 원하는 초 단위 설정 (예: 5초)
+
+function updateTimer() {
+  timer.textContent = `${countdown}초 후 돌아가기`;  // ✅ 텍스트 업데이트
+  countdown--;
+
+  if (countdown < 0) {
+    clearInterval(timerInterval);  // ✅ 타이머 종료
+    window.location.href = "/gui/";  // ✅ 0초가 되면 페이지 이동
+  }
+}
+
+// ✅ 1초마다 updateTimer 실행
+const timerInterval = setInterval(updateTimer, 1000);
+
+// ✅ 초기 실행 (0초 딜레이 방지)
+updateTimer();

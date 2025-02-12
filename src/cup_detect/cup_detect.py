@@ -2,7 +2,7 @@ import cv2
 import torch
 import time
 import os
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, jsonify
 from flask_cors import CORS
 import threading
 import queue
@@ -16,6 +16,10 @@ import subprocess
 
 app = Flask(__name__)
 CORS(app)
+
+video_status = {"status": "not done"}
+# app.config["video_status"] = {"status": "not done"}
+cap = None
 
 
 class CupBoundaryDetector:
@@ -66,11 +70,13 @@ class CupBoundaryDetector:
             self.device = torch.device('cpu')
             print("Using CPU")
 
+        # global cap
         # Internal variables
         self.cap = None
         self.model = None
         try:
             # self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='custom_data/cup_detect_coco_finetune/weights/best.pt')
+            torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
             self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='/app/shared_folder/best.pt')
             self.model.eval()  # Set model to evaluation mode
         except Exception as e:
@@ -99,6 +105,12 @@ class CupBoundaryDetector:
             if frame is None:  # sentinel received: end the thread
                 break
             # print("saving_video_thread", flush=True)
+
+        # ✅ 프레임이 None이거나 크기가 다르면 예외 처리
+            if frame is None or frame.shape[0] != frame_size[1] or frame.shape[1] != frame_size[0]:
+                print(f"⚠️ Frame size mismatch! Expected: {frame_size}, Got: {frame.shape if frame is not None else 'None'}")
+                continue
+
             out.write(frame)
             frame_count += 1
         self.out.release()
@@ -173,6 +185,10 @@ class CupBoundaryDetector:
                             self.event_time = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
                             print(f"🚨 이벤트 발생: 객체가 바운더리를 벗어났습니다. (Event Time: {self.event_time:.2f} 초)")
                             # self.out.release()
+
+                            # 컵 가져감 이벤트 발생
+
+                            # 이벤트 발생 시 비디오 저장 
                             convert_to_mp4()
                             self.frame_queue.put(None)
                             print("saving_video_thread_done_EVENT", flush=True)
@@ -196,8 +212,6 @@ detector = CupBoundaryDetector(
 )
 # detector.run_detection()
 
-
-
 @app.route('/video')
 def video():
     print("video", flush=True)
@@ -206,11 +220,18 @@ def video():
 
 
 def stream_video():
+    while not detector.frame_queue.empty():
+        # 큐가 비어있지 않으면 큐에서 프레임 가져오기
+        detector.frame_queue.get()
+
+
+    
+    # global cap
     cap = cv2.VideoCapture(0)
     # initial_detected = False
     # event_time = None
     break_count = 0
-    # post_event_frames = int(fps * post_event_seconds)    
+    # post_event_frames = int(fps * post_event_seconds)   
 
 
     # cap = cv2.VideoCapture('/app/last_10_seconds.avi')
@@ -223,10 +244,28 @@ def stream_video():
     # fourcc= cv2.cv.CV_FOURCC('m', 'p', '4', 'v')
 
     # out = cv2.VideoWriter('output.avi', fourcc, 30.0, (600, 480))
-    
-    save_thread = threading.Thread(target=detector.saving_video_thread, args=(detector.frame_queue, 'output.avi', fourcc, 30.0, (int(cap.get(3)), int(cap.get(4)))))
-    save_thread.daemon = True
-    save_thread.start()
+    if hasattr(detector, "save_thread") and detector.save_thread.is_alive():
+        print("⚠️ Stopping previous save_thread...", flush=True)
+        detector.frame_queue.put(None)  # ✅ 현재 실행 중인 쓰레드 종료 신호
+        detector.save_thread.join()  # ✅ 기존 쓰레드가 종료될 때까지 대기
+
+    # ✅ 새로운 저장 스레드 시작
+    detector.save_thread = threading.Thread(
+        target=detector.saving_video_thread,
+        args=(detector.frame_queue, 'output.avi', fourcc, 30.0, (int(cap.get(3)), int(cap.get(4))))
+    )
+    detector.save_thread.daemon = True
+    detector.save_thread.start()
+
+
+
+
+    # save_thread = threading.Thread(target=detector.saving_video_thread, args=(detector.frame_queue
+    # , 'output.avi', fourcc, 30.0, (int(cap.get(3)), int(cap.get(4)))))
+    # save_thread.daemon = True
+    # save_thread.start()
+
+
 
     if not cap.isOpened():
         print("Failed to open.")
@@ -305,7 +344,7 @@ def stream_video():
                b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n\r\n')
     cap.release()
     detector.frame_queue.put(None)  # Signal the saving thread to exit
-    save_thread.join()
+    detector.save_thread.join()
     time.sleep(1)
     print("VIDEO RECORDING AND SAVING DONE", flush=True)
     convert_to_mp4()
@@ -336,45 +375,61 @@ def convert_to_mp4(input_file="output.avi", output_file="/app/video_src/output.m
             os.makedirs(output_dir, exist_ok=True)
             print(f"✅ Created output directory: {output_dir}")
 
+        # 마지막 10초 영상 추출
+        extract_last_10_seconds(input_file, output_file, output_fps=30)
+        final_output_file = output_file
 
-        # 마지막 10초 추출
-        extract_last_10_seconds(input_file, "10_seconds.avi", output_fps=30)
-
-        # 10초 추출된 영상을 MP4로 변환
-        final_output_file = "/app/video_src/10_seconds_output.mp4"
+        print("convert_to_mp4", flush=True)
         subprocess.run([
-            "ffmpeg", "-y", "-i", "10_seconds.avi", "-vcodec", "libx264", "-acodec", "aac","-r","30", final_output_file
+            "ffmpeg","-y", "-i", input_file, "-vcodec", "libx264", "-acodec", "aac", "-r", "30", final_output_file
         ], check=True)
+        print(f"✅ Conversion to MP4 successful: {final_output_file}")
         print(f"✅ 10초 영상 MP4 변환 성공: {final_output_file}")
-
-        # Node.js 서버에 전송
-        video_recording_done(final_output_file)
-
+        video_recording_done()
     except subprocess.CalledProcessError as e:
         print(f"❌ FFmpeg conversion failed: {e}")
 
 
 
-def video_recording_done(video_path):
-    # convert_to_mp4()
+def video_recording_done():
     """
     Sends a 'done' status to the Node.js GUI container by making a POST request.
-    The endpoint is assumed to be 'http://gui_service:3001/video_recording_done'.
     """
     print("video_recording_done_post", flush=True)
+    
     url = 'http://gui_service:3001/video_recording_done'
-    # url = 'http://127.0.0.1:3001/video_recording_done'
-    payload = {"status": "done","videoPath":video_path}
-    headers = {'Content-Type': 'application/json'}
+    payload = {"status": "done"}  # ✅ 직접 서버로 상태 전송
+    
+    headers = {'Content-Type': 'application/json', 'Cache-Control': 'no-cache'}
+    
     try:
         print("video_recording_done_post_try", flush=True)
-        response = requests.post(url, json=payload, timeout=5)
-        response.raise_for_status()  # Raise an error if the status is not 200-299
-        print("Successfully sent done status to Node.js GUI container.", flush=True)
+        response = requests.post(url, json=payload, timeout=5, headers=headers)
+        response.raise_for_status()
+        print("✅ Successfully sent 'done' status to Node.js GUI container.", flush=True)
     except requests.exceptions.RequestException as e:
-        print(f"Error sending done status: {e}", flush=True)
+        print(f"❌ Error sending 'done' status: {e}", flush=True)
 
-#10초 추출 함수
+
+
+
+@app.route("/stop_camera", methods=['POST'])
+def stop_camera():
+    # global cap
+    if detector.cap is None:
+        print("[ERROR] ❌ cap is None. Camera might not have been started.", flush=True)
+        return jsonify({"error": "Camera was never started"}), 400
+
+    if not detector.cap.isOpened():
+        print("[ERROR] ❌ cap is not opened. It might be already released.", flush=True)
+        return jsonify({"error": "Camera is not opened"}), 400
+
+    detector.cap.release()
+    detector.cap = None
+    print("[INFO] ✅ Camera successfully stopped.", flush=True)
+    return jsonify({"message": "Camera stopped"}), 200
+
+
 def extract_last_10_seconds(input_file="output.avi", output_file="10_seconds.avi", output_fps=30):
     cap = cv2.VideoCapture(input_file)
     original_fps = cap.get(cv2.CAP_PROP_FPS)
@@ -384,7 +439,7 @@ def extract_last_10_seconds(input_file="output.avi", output_file="10_seconds.avi
 
     # 마지막 10초 시작 프레임 계산
     last_10_seconds_start_frame = max(0, total_frames - int(original_fps * 10))
-    
+
     # 새로운 출력 파일 생성
     out = cv2.VideoWriter(output_file, cv2.VideoWriter_fourcc(*'MJPG'), output_fps, (frame_width, frame_height))
 
@@ -400,6 +455,7 @@ def extract_last_10_seconds(input_file="output.avi", output_file="10_seconds.avi
     cap.release()
     out.release()
     print(f"✅ 마지막 10초 영상 추출 완료: {output_file}")
+
 
 if __name__ == "__main__":
     

@@ -56,8 +56,6 @@ app.post('/video_recording_done', (req, res) => {
     return res.status(400).json({ error: "Invalid request: 'status' field is required." });
   }
 
-
-
   console.log('📌 Video recording done:', req.body);
   recordingStatus = req.body.status; // Update status
   res.status(200).json({ message: '✅ Video recording done received' });
@@ -68,7 +66,15 @@ app.get('/video_recording_status', (req, res) => {
   res.json({ status: recordingStatus });
 });
 
-  
+
+// ✅ 상태 초기화 엔드포인트 
+app.post('/reset_video_recording_status', (req, res) => {
+  recordingStatus = "not done";  // ✅ 상태 초기화
+  console.log('🔄 Video recording status reset to "not done"');
+  res.status(200).json({ message: '✅ Video recording status reset' });
+});
+
+
   
 // List videos in img_src for the current session
 app.get('/latest-video', (req, res) => {
