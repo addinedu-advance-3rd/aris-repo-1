@@ -565,10 +565,8 @@ class A_Circle_Arm():
         print(f"[INFO] 최종 반환된 위치 번호: {detected_position}")
 
         time.sleep(2)
-        
 
         self.threading_start()
-
 
 
 

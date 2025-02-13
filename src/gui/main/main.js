@@ -1,4 +1,5 @@
 import { NGROK_BASE_URL } from './config.js';
+import { speak } from './tts.js';
 
 // 배경 컨테이너에 아이템 자동 생성
 document.addEventListener('DOMContentLoaded', function() {
@@ -23,6 +24,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     bgContainer.innerHTML = html;
   });
+
+//tts 추가
+const startBtn = document.getElementById('start-btn');
+startBtn.addEventListener('click', startKiosk);
+
+function startKiosk() {
+    // TTS 음성 출력
+    speak("어서오세요. 화면을 바라봐 주세요.");
+
+    // 랜딩 페이지 숨기고 메인 페이지 표시
+    document.getElementById('landing').classList.add('hidden');
+    document.getElementById('main').classList.remove('hidden');
+
+    // 캠 매칭 시작
+    startFaceDetection();
+    setStreamImage();
+}
 
 
 // face detection 로직을 실행하는 함수
