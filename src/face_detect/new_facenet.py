@@ -33,7 +33,7 @@ else:
     print("Using CPU")
 
 
-save_to_db_api_url  = "http://db_service:8000/users"
+save_to_db_api_url  = "http://nginx-proxy/db/aris/customers/" # 200
 
 # -----------------------------
 # Helper functions
@@ -82,7 +82,7 @@ class FaceRecognitionSystem:
         self.user_gender = "Unknown"
 
         # Load existing embeddings from JSON
-        self.load_embeddings_from_folder()
+        #self.load_embeddings_from_folder()
         self.load_embeddings_from_db()
 
         #캠 종료 플래그
@@ -125,16 +125,15 @@ class FaceRecognitionSystem:
         
         try:
             response = requests.get(save_to_db_api_url)
+            print("응답 상태 코드:", response.status_code)
             if response.status_code == 200:
                 data = response.json()
                 for user in data:
-                    user_id = str(user['u_id'])
+                    user_id = str(user['id'])
                     name = user['name']
                     embedding = user['embedding']
                     self.reference_embeddings[user_id] = (name, embedding)
-
-            print(f"Loaded {len(self.reference_embeddings)} reference embeddings from DB.")
-
+            #print(f"Loaded {len(self.reference_embeddings)} reference embeddings from DB.")
         except sqlite3.Error as e:
             print(f"Database error: {str(e)}")
 
@@ -248,10 +247,11 @@ class FaceRecognitionSystem:
         """
         Save the new face embedding, along with age, gender (from analysis), to the JSON.
         """
-        metadata_path = os.path.join(self.folder_path, "face_metadata.json")
-        print(f"metadata_path : {metadata_path}",flush=True)
+        #metadata_path = os.path.join(self.folder_path, "face_metadata.json")
+        #print(f"metadata_path : {metadata_path}",flush=True)
 
-        # Load existing
+        # Load existing (봉인)
+        '''
         if os.path.exists(metadata_path):
             with open(metadata_path, "r", encoding="utf-8") as f:
                 try:
@@ -265,6 +265,7 @@ class FaceRecognitionSystem:
         if "Customer" not in metadata:
             metadata["Customer"] = []
             print("customer not in metadata",flush=True)
+        '''
 
 
         # We assume self.analysis_results is available after background thread
@@ -286,18 +287,18 @@ class FaceRecognitionSystem:
             "gender": gender,
             "embedding": embedding.tolist()
         }
-        metadata["Customer"].append(new_entry)
+        #metadata["Customer"].append(new_entry)
 
         # Save to JSON
-        print("start saving json",flush=True)
+        #print("start saving json",flush=True)
 
-        with open(metadata_path, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, indent=4, ensure_ascii=False)
+        #with open(metadata_path, "w", encoding="utf-8") as f:
+            #json.dump(metadata, f, indent=4, ensure_ascii=False)
 
         # Reload the local reference embeddings
 
         # self.load_embeddings_from_folder()        # Save to DB
-        print(f"save_to_db_api_url : {save_to_db_api_url}" , flush=True)
+        #print(f"save_to_db_api_url : {save_to_db_api_url}" , flush=True)
 
         try : 
             response = requests.post(save_to_db_api_url, json=new_entry)

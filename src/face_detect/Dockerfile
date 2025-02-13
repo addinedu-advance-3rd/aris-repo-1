@@ -11,8 +11,7 @@ RUN apt-get update && apt-get install -y \
 
 # 의존성 파일 복사 및 설치 (최적화)
 COPY requirements.txt /app/
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
-
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt && apt-get update && apt-get install -y curl
 # 모델 파일 다운로드 및 저장 (최적화)
 RUN mkdir -p /root/.deepface/weights && \
     wget -O /root/.deepface/weights/gender_model_weights.h5 \

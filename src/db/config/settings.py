@@ -25,15 +25,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-e13an2ze4=znc+fgv056o*m8sa&!pvpukfh9p308z(b^=j(j5&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1', 'db_service', 'nginx-proxy']
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'drf_yasg',
+    #'drf_yasg',
     'rest_framework',
     'aris.apps.ArisConfig',
     'django.contrib.admin',
@@ -121,6 +121,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# 추가 static 파일
+STATICFILES_DIRS = []
+
+# collectstatic 명령어로 모을 위치(배포)
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
