@@ -1,11 +1,12 @@
 import { NGROK_BASE_URL } from './config.js';
-
+import { speak } from './tts.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('nicknameForm');
     const nicknameInput = document.getElementById('nicknameInput');
     const statusMessage = document.getElementById('statusMessage');
 
+    speak("사용할 닉네임을 입력해주세요.")
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const nickname = nicknameInput.value.trim();

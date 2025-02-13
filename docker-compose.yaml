@@ -26,6 +26,9 @@ services:
       - ENV_VAR_NAME=value  # 필요한 환경 변수 추가 (예시)
     expose:
       - "8080"
+    devices:
+      - "/dev/video2:/dev/video0"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
+      # - "/dev/video1:/dev/video0"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
     restart : always
     volumes:
       - ./src/control:/app  # 로컬 파일과 컨테이너 파일 매핑
@@ -102,7 +105,7 @@ services:
     expose:
       - "6000"
     devices:
-      - "/dev/video0:/dev/video0"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
+      - "/dev/video4:/dev/video1"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
     networks:
         - mynet
     restart: always
