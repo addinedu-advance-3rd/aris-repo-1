@@ -44,7 +44,8 @@ class A_Circle_Arm():
             self.ice_cream_event = threading.Event()
             self.running = True
             self.last_no_collision_time = None  # 최근 충돌이 없었던 시간을 기록
-            
+            self.stop_collision_thread_status = False
+            self.stop_collision_handler_thread_status = False
             self.app.add_url_rule(
                 '/select_toppings',
                 view_func=self.select_toppings,
@@ -330,8 +331,10 @@ class A_Circle_Arm():
 
             time.sleep(0.1)
 
-
-
+    def stop_collision_thread(self):
+        if self.collision_thread.is_alive() and self.collision_thread : 
+            self.collision_thread.join()
+            self.collision_handler_thread.join()
     def detect_collision(self):
         """손과 로봇팔의 충돌 감지를 수행"""
         self.last_no_collision_time = None  # 최근 충돌이 없었던 시간을 기록
@@ -405,9 +408,23 @@ class A_Circle_Arm():
                 # if cv2.waitKey(1) & 0xFF == ord('q'):
                 #     break      
     def threading_start(self):
-        print("[INFO] Threading Start!")
-        self.collision_thread.start()
-        self.collision_handler_thread.start()
+        print("[INFO] Threading thying start!")
+        if not self.collision_thread.is_alive() and not self.collision_handler_thread.is_alive() and not self.stop_collision_thread_status :  
+            # self.collision_thread = threading.Thread(target=self.detect_collision)
+            self.collision_thread.start()
+            self.collision_handler_thread.start()
+            print("[INFO] Collision Thread Started!")
+            print("[INFO] Collision Thread Started!")
+            print("[INFO] Collision Thread Started!")
+            print("[INFO] Collision Thread Started!")
+            print("[INFO] Collision Thread Started!")
+            print("[INFO] Collision Thread Started!")
+            print("[INFO] Collision Thread Started!")
+            print("[INFO] Collision Thread Started!")
+            print("[INFO] Collision Thread Started!")
+            print("[INFO] Collision Thread Started!")
+            self.stop_collision_thread_status = True
+            self.stop_collision_handler_thread_status = True
 
         
     def set_collision_status(self, status): # 현재 사용 x
@@ -519,7 +536,7 @@ class A_Circle_Arm():
 
 
     def create_response(self, data, status=200):
-        """ ✅ Ensure all responses contain CORS headers """
+        """ ✅ Ensure all responses contain CORS headers """    
         response = jsonify(data)
         response.status_code = status
         response.headers.add("Access-Control-Allow-Origin", "*")
@@ -548,7 +565,12 @@ class A_Circle_Arm():
         print(f"[INFO] 최종 반환된 위치 번호: {detected_position}")
 
         time.sleep(2)
+        
+
         self.threading_start()
+
+
+
 
         # 토핑 선택과 관련된 초기 설정
         self._init_6th_motor()  # 6번째 모터 초기화
@@ -708,7 +730,7 @@ class A_Circle_Arm():
 
         start_time = time.time()
 
-        while time.time() - start_time < 10:
+        while time.time() - start_time < 30:
             try:
                 response = requests.get('http://control_service:8080/check_ice_cream_status', timeout=5)
                 if response.json()['ice_cream_taken']:
@@ -720,23 +742,24 @@ class A_Circle_Arm():
             print("waiting for ice cream taken....", flush=True)
             
             if self.ice_cream_taken:   # 아이스크림을 가져갔다면 ====> 여기서 '아이스크림을 사람이 가져갔다' 라는 정보가 입력되어야 하는데, 어떤 식으로 구현해야 할지 모르겠습니다..
-                self._move_one_path("person_to_press_retrieve") # 바로 프레스로 이동
+                #self._move_one_path("person_to_press_retrieve") # 바로 프레스로 이동
                 self._grap(False)  # 그랩 해제
                 break
             
         else:      # 아이스크림을 안 가져갔다면
             print("아이스크림을 안 가져갔다면", flush=True)
-            self._move_one_path("put_on_ice_1")  # 아이스크림 위치에 올리기
-            self._move_one_path("ice_1_to_in_press_retrieve")  # 그 후 프레스로 이동
+            #self._move_one_path("put_on_ice_1")  # 아이스크림 위치에 올리기
+            #self._move_one_path("ice_1_to_in_press_retrieve")  # 그 후 프레스로 이동
             self._grap(False)  # 그랩 해제
         
         self._grap(True)  # 다시 그랩
         print("아이스크림 버리는 위치로 이동", flush=True)
-        self._move_one_path("press_to_waste")  # 아이스크림 버리는 위치로
+        #self._move_one_path("press_to_waste")  # 아이스크림 버리는 위치로
         self._turn_cup(-180)  # 컵 회전
         self._grap(False)  # 그랩 해제
         """time.sleep(3)  # 3초 대기"""
         self._return_to_default() # 기본 위치로 돌아가기
+
         """self._move_one_path("return_to_default")"""
         """self.arm.set_cgpio_analog(0, 5)
         time.sleep(3)
