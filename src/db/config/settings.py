@@ -25,15 +25,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-e13an2ze4=znc+fgv056o*m8sa&!pvpukfh9p308z(b^=j(j5&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1', 'db_service', 'nginx-proxy']
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'drf_yasg',
+    #'drf_yasg',
     'rest_framework',
     'aris.apps.ArisConfig',
     'django.contrib.admin',

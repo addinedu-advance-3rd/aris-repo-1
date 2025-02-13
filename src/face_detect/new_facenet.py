@@ -33,7 +33,7 @@ else:
     print("Using CPU")
 
 
-save_to_db_api_url  = 'http://db_service:8000/aris/customers/'
+save_to_db_api_url  = "http://nginx-proxy/db/aris/customers/" # 200
 
 # -----------------------------
 # Helper functions
@@ -119,29 +119,23 @@ class FaceRecognitionSystem:
 
 
     def load_embeddings_from_db(self):
+
         """Load face embeddings + metadata from SQLite3 database."""
         self.reference_embeddings.clear()
-    
-        try:
-            print(f"Making GET request to {save_to_db_api_url}")
-            response = requests.get(save_to_db_api_url) # 왜 못받아오냐 병신같은새끼
         
-            # Check the status code
+        try:
+            response = requests.get(save_to_db_api_url)
+            print("응답 상태 코드:", response.status_code)
             if response.status_code == 200:
-                print("Response received successfully.")
                 data = response.json()
                 for user in data:
                     user_id = str(user['id'])
                     name = user['name']
                     embedding = user['embedding']
                     self.reference_embeddings[user_id] = (name, embedding)
-
-                print(f"Loaded {len(self.reference_embeddings)} reference embeddings from DB.")
-            else:
-                print(f"Failed to get data from DB. Status code: {response.status_code}")
-
-        except requests.exceptions.RequestException as e:
-            print(f"Request failed: {e}")
+            #print(f"Loaded {len(self.reference_embeddings)} reference embeddings from DB.")
+        except sqlite3.Error as e:
+            print(f"Database error: {str(e)}")
 
 
     def extract_embedding_and_boxes(self, image):
@@ -174,8 +168,7 @@ class FaceRecognitionSystem:
             analysis = DeepFace.analyze(face_image, actions=['age', 'gender'], enforce_detection=False)
             if isinstance(analysis, list):
                 analysis = analysis[0]
-            age = analysis.get('age', 0)
-            age = int(age) # 넌 정수야
+            age = analysis.get('age', 'Unknown')
             # If gender is a dict of probabilities
             if isinstance(analysis.get('gender'), dict):
                 gender_prob = analysis['gender']
@@ -225,9 +218,9 @@ class FaceRecognitionSystem:
         with self.lock:
             return self.recognized_user
     #여기 나이 성별 추가
-    def set_user_age(self, value: int):
+    def set_user_age(self, age):
         with self.lock:
-            self.user_age = value
+            self.user_age = age
 
     def get_user_age(self):
         with self.lock:
@@ -257,8 +250,7 @@ class FaceRecognitionSystem:
         #metadata_path = os.path.join(self.folder_path, "face_metadata.json")
         #print(f"metadata_path : {metadata_path}",flush=True)
 
-        # Load existing 
-        # 폴더가져와서 추가해서 저장 -> 추가데이터 바로 전송
+        # Load existing (봉인)
         '''
         if os.path.exists(metadata_path):
             with open(metadata_path, "r", encoding="utf-8") as f:
@@ -274,6 +266,8 @@ class FaceRecognitionSystem:
             metadata["Customer"] = []
             print("customer not in metadata",flush=True)
         '''
+
+
         # We assume self.analysis_results is available after background thread
         with self.lock:
             print("while self LOCK",flush=True)
@@ -282,7 +276,7 @@ class FaceRecognitionSystem:
                 age, gender = self.analysis_results
                 print("analysis_result is not none",flush=True)
             else:
-                age, gender = (0, 'Unknown')
+                age, gender = ('Unknown', 'Unknown')
 
         user_id = generate_hashed_uuid(4)
         print(f"Saving new user {user_name} with ID: {user_id}")
@@ -293,24 +287,32 @@ class FaceRecognitionSystem:
             "gender": gender,
             "embedding": embedding.tolist()
         }
-        print("Sending data:", new_entry)
         #metadata["Customer"].append(new_entry)
-        #여기서 만들어진 새로운 유저 정보 json형태로 바로 db로 쏴줌
 
-        # Django 서버에 POST 요청
-        try:
-            response = requests.post(save_to_db_api_url, json=new_entry, timeout=5)
-        
+        # Save to JSON
+        #print("start saving json",flush=True)
+
+        #with open(metadata_path, "w", encoding="utf-8") as f:
+            #json.dump(metadata, f, indent=4, ensure_ascii=False)
+
+        # Reload the local reference embeddings
+
+        # self.load_embeddings_from_folder()        # Save to DB
+        #print(f"save_to_db_api_url : {save_to_db_api_url}" , flush=True)
+
+        try : 
+            response = requests.post(save_to_db_api_url, json=new_entry)
+
             if response.status_code == 201:
-                print("Customer is added successfully to DB!")
+                print("User added successfully to DB!" , flush=True )
             else:
-                print(f"Failed to add user to DB. Status code: {response.status_code}")
-    
-        except requests.exceptions.RequestException as e:
-            print(f"Error saving to DB: {e}")
-    
-        print(f"{user_name}'s embedding and analysis saved!")
-        
+                print("Failed to add user to DB. Status code:", response.status_code , flush=True)
+        except Exception as e:
+            print("Error saving to DB:", e , flush=True)
+
+        print(f"{user_name}'s embedding and analysis saved!", flush=True)
+
+        print("load_embeddings_from_db",flush=True)
         # 데이터베이스에서 embedding 로드
         self.load_embeddings_from_db()
 
@@ -449,7 +451,6 @@ def stream_video():
                 if no_match_start_time and (time.time() - no_match_start_time > 3):
                     print("No face match for 2 seconds. Exiting stream...", flush=True)
                     face_system.set_completed_status("no_match")
-                    response = requests.post('http://localhost:5000/submit_name', json={'name': 'Test User'})
                     break
                 
                 # 매칭된 사용자가 없을 경우 상태 초기화

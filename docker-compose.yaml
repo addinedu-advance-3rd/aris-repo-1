@@ -118,4 +118,5 @@ volumes:
 
 networks:
   mynet : 
+    name : aris-repo-1_mynet
     driver: bridge

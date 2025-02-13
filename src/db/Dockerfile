@@ -8,7 +8,7 @@ WORKDIR /app
 COPY requirements.txt /app/
 
 # 4. 의존성 설치
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && apt-get update && apt-get install -y curl
 
 # 5. 전체 프로젝트 파일을 복사
 COPY . /app/
@@ -20,4 +20,4 @@ ENV PYTHONUNBUFFERED 1
 EXPOSE 8000
 
 # 8. Gunicorn을 사용하여 Django 실행
-CMD ["gunicorn", "config.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application", "--workers", "3"]
