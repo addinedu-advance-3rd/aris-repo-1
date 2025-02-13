@@ -143,13 +143,6 @@ class CupBoundaryDetector:
             cv2.putText(frame, "Detection Zone", (self.boundary_xmin, self.boundary_ymin - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
 
-            # ✅ 객체 감지 확인
-            # if df_results.empty:
-            #     print("❌ No objects detected!", flush=True)
-            #     return frame
-
-            # print(df_results[['name', 'confidence']], flush=True)
-
             for _, row in df_results.iterrows():
                 if df_results.empty:
                     return frame   # 데이터프레임이 비어 있으면 다음 루프로 넘어감
@@ -189,7 +182,7 @@ class CupBoundaryDetector:
                             # 컵 가져감 이벤트 발생
 
                             # 이벤트 발생 시 비디오 저장 
-                            convert_to_mp4()
+                            convert_to_mp4(status="TAKEN")
                             self.frame_queue.put(None)
                             print("saving_video_thread_done_EVENT", flush=True)
 
@@ -282,106 +275,115 @@ def stream_video():
     start_time = time.time()
 
     while True:
-        if time.time() - start_time > 15:
-            print("Timeout reached: 15 seconds elapsed. Finishing recording.", flush=True)
-            break
+        # if time.time() - start_time > 20:
+        if False :
+            print("XXXXXXXXX.", flush=True)
+        #     print("Timeout reached: 20 seconds elapsed. Finishing recording.", flush=True)
+        #     convert_to_mp4(status="NOT TAKEN")
+        #     break
 
+        else : 
+            ret, frame = cap.read()
+            if (frame is None):
+                print("stream_video_break-frame is None", flush=True)
+                break
+            if frame is not None:
+                _, buffer = cv2.imencode('.jpg', frame)
+                frame_bytes = buffer.tobytes()
+                # print(f"Sending frame: {len(frame_bytes)} bytes", flush=True)
 
-        ret, frame = cap.read()
-        if (frame is None):
-            print("stream_video_break-frame is None", flush=True)
-            break
-        if frame is not None:
-            _, buffer = cv2.imencode('.jpg', frame)
-            frame_bytes = buffer.tobytes()
-            # print(f"Sending frame: {len(frame_bytes)} bytes", flush=True)
+                processed_frame = detector.process_frame(frame, cap)
+                # ✅ BGR 포맷이 아닐 경우 변환
+                if len(processed_frame.shape) == 2:  # Grayscale인 경우
+                    processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_GRAY2BGR)
+                elif processed_frame.shape[2] == 4:  # RGBA인 경우
+                    processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_RGBA2BGR)
 
-            processed_frame = detector.process_frame(frame, cap)
-             # ✅ BGR 포맷이 아닐 경우 변환
-            if len(processed_frame.shape) == 2:  # Grayscale인 경우
-                processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_GRAY2BGR)
-            elif processed_frame.shape[2] == 4:  # RGBA인 경우
-                processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_RGBA2BGR)
+                try :
+                    if processed_frame is not None and processed_frame.shape[0] > 0 and processed_frame.shape[1] > 0:
+                        try:
+                            detector.frame_queue.put(processed_frame, block=False)
+                            # print(f"📌 Frame added to queue. Queue size: {detector.frame_queue.qsize()}", flush=True)
+                        except Exception as e:
+                            print(f"Error: {e}")
+                            err_count += 1
+                            if err_count > 10:
+                                print("Error: 10 frames in a row", flush=True)
+                                convert_to_mp4(status="NOT TAKEN")
+                                # video_recording_done()
+                                detector.frame_queue.put(None)
+                                break
+                        
 
-            try :
-                if processed_frame is not None and processed_frame.shape[0] > 0 and processed_frame.shape[1] > 0:
-                    try:
-                        detector.frame_queue.put(processed_frame, block=False)
-                        # print(f"📌 Frame added to queue. Queue size: {detector.frame_queue.qsize()}", flush=True)
-                    except Exception as e:
-                        print(f"Error: {e}")
-                        err_count += 1
-                        if err_count > 10:
-                            print("Error: 10 frames in a row", flush=True)
-                            convert_to_mp4()
-                            # video_recording_done()
-                            detector.frame_queue.put(None)
-                            break
-                    
+                    else:
+                        print("⚠️ Invalid processed_frame detected! Skipping...", flush=True)
+                    # dummy_frame = np.zeros((600, 480, 3), dtype=np.uint8)
+                    detector.frame_queue.put(processed_frame, block=False)
+                except Exception as e:
+                    print(f"Error: {e}")
 
-                else:
-                    print("⚠️ Invalid processed_frame detected! Skipping...", flush=True)
-                # dummy_frame = np.zeros((600, 480, 3), dtype=np.uint8)
-                detector.frame_queue.put(processed_frame, block=False)
-            except Exception as e:
-                print(f"Error: {e}")
+                yield (b'--frame\r\n'
+                    b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            else:
+                print("Empty frame received")
+                break
+            if not ret:
+                print("stream_video_break", flush=True)
+                break
+            ret2, buffer = cv2.imencode('.jpg', processed_frame)
+
+            if not ret2:
+                print("Failed to encode frame.")
+                break
 
             yield (b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-        else:
-            print("Empty frame received")
-            break
-        if not ret:
-            print("stream_video_break", flush=True)
-            break
-        ret2, buffer = cv2.imencode('.jpg', processed_frame)
-
-        if not ret2:
-            print("Failed to encode frame.")
-            break
-
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n\r\n')
+                b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n\r\n')
     cap.release()
     detector.frame_queue.put(None)  # Signal the saving thread to exit
     detector.save_thread.join()
     time.sleep(1)
     print("VIDEO RECORDING AND SAVING DONE", flush=True)
-    convert_to_mp4()
+    # convert_to_mp4(status = "NOT TAKEN")
     # video_recording_done()
 # request post video recording done 
 
-def notify_control_service():
+def notify_control_service(status):
     print("notify_control_service", flush=True)
+    print (status, flush=True)
     url = 'http://control_service:8080/ice_cream_taken'
-    payload = {"status": "taken"}
+    payload = {"status": status}
     headers = {'Content-Type': 'application/json'}
     try:
         print("notify_control_service_try", flush=True)
         response = requests.post(url, json=payload, timeout=5)
-        response.raise_for_status()  # Raise an error if the status is not 200-299
-        print("Successfully sent done status to Node.js GUI container.", flush=True)
+        response.raise_for_status() 
+        print ("notify_control_service_response", response.json(), flush=True) # Raise an error if the status is not 200-299
+    
     except Exception as e:
         print(f"Error sending done status: {e}", flush=True)
 
 
-def convert_to_mp4(input_file="output.avi", output_file="/app/video_src/output.mp4"):
+def convert_to_mp4(input_file="output.avi", output_file="/app/video_src/output.mp4", status="NOT TAKEN"):
     """Converts AVI file to MP4 using FFmpeg"""
     try:
         # 컵 가져감 이벤트 발생 시 컨트롤 서비스에 알림
-        notify_control_service()
+        print(f"convert_to_mp4 , status: {status}", flush=True)
+        notify_control_service(status)
         output_dir =  os.path.dirname(output_file)
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
             print(f"✅ Created output directory: {output_dir}")
 
+
+        avi_cut = "/app/video_src/cut_output.avi"
         # 마지막 10초 영상 추출
-        extract_last_10_seconds(input_file, output_file, output_fps=30)
-        final_output_file = output_file
+        extract_last_10_seconds(input_file, avi_cut, output_fps=30)
+
+        final_output_file = "/app/video_src/output.mp4"
 
         print("convert_to_mp4", flush=True)
         subprocess.run([
-            "ffmpeg","-y", "-i", input_file, "-vcodec", "libx264", "-acodec", "aac", "-r", "30", final_output_file
+            "ffmpeg","-y", "-i", avi_cut, "-vcodec", "libx264", "-acodec", "aac", "-r", "30", final_output_file
         ], check=True)
         print(f"✅ Conversion to MP4 successful: {final_output_file}")
         print(f"✅ 10초 영상 MP4 변환 성공: {final_output_file}")
@@ -430,7 +432,7 @@ def stop_camera():
     return jsonify({"message": "Camera stopped"}), 200
 
 
-def extract_last_10_seconds(input_file="output.avi", output_file="10_seconds.avi", output_fps=30):
+def extract_last_10_seconds(input_file, output_file, output_fps=30):
     cap = cv2.VideoCapture(input_file)
     original_fps = cap.get(cv2.CAP_PROP_FPS)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))

@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ✅ TTS: 아이스크림 제조 중 안내
   speak("아이스크림을 제조 중입니다. 잠시만 기다려 주세요.");
 
-  // 상태 체크 함수
+  // 제조 완료 상태 체크 함수
   function checkEndStatus() {
     fetch(`${NGROK_BASE_URL}/control/check_end_status`)
       .then(response => response.json())

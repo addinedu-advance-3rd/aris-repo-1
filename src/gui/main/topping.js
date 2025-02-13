@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
 
+
 document.addEventListener('DOMContentLoaded', () => {
     const nicknameDisplay = document.getElementById('nickname-display');
     const form = document.getElementById('topping-form');
@@ -46,9 +47,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (age && gender) {
         const recommendedToppings = getRecommendedToppings(parseInt(age), gender);
-        recommendationDisplay.textContent = `추천 토핑: ${recommendedToppings.join(', ')}`;
+        // 줄바꿈 및 이모지 추가
+        recommendationDisplay.innerHTML = `🍦 추천 토핑 🍦<br><br>` +
+        recommendedToppings.map(topping => `✅ ${topping}`).join('<br>');
     } else {
-        recommendationDisplay.textContent = '추천 정보를 가져오지 못했습니다.';
+        recommendationDisplay.innerHTML = '❌ 추천 정보를 가져오지 못했습니다.';
     }
 
     // 토핑 추천 로직
@@ -126,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Server response:', result);
 
         // TODO: 주문 완료 후 로직 (DB 저장, 알림 등)
-        alert('주문이 완료되었습니다!');
+        console.log('주문이 완료되었습니다!');
 
         // (4) 다음 페이지로 이동 (Webcam Video Recorder 등)
         window.location.href = '/gui/memory.html';

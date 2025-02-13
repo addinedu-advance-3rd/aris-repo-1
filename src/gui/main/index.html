@@ -135,7 +135,7 @@ body {
 }
 
 .start-btn-container {
-  margin-top: 200px;
+  margin-top: 300px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -189,6 +189,25 @@ body {
   }
 }
 
+.sub-logo {
+  text-align: center;
+  font: 400 5vh "Vibur";  /* 글씨 크기를 더 작게 */
+  color: #fff;
+  text-shadow: 0 0 5px #ff9999, 0 0 10px #ff6666;
+}
+
+.start-btn-container-text{
+  color: #fee;
+  }
+
+.face-detection-container{
+  /* color: #fee; */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 /* #main {
   min-height: 100vh;
   display: flex; align-items: center; justify-content: center; flex-direction: column;
@@ -203,20 +222,32 @@ body {
   <div class="bg-container"></div>
   <!-- 랜딩 페이지 -->
   <div id="landing" class="content-container">
+    
+    
     <div class="logo">
-      <b>넌
+      <b>
         <span>아이스크림</span>
-        <span>먹을 때가</span> 
-        <span>제일</span>
-        <span>예뻐</span>
-    </b>
+        <span> 가게</span>
+      </b>
+      
+      <div class="sub-logo">
+        <div class="sub-logo-container-text">
+          <span>넌</span>
+          <span>아이스크림</span>
+          <span>먹을 때가</span> 
+          <span>제일</span>
+          <span>예뻐</span>
+      </div>
+    </div>
   </div>
 
 
     <!-- <h1>아이스크림 키오스크에 오신 것을 환영합니다!</h1> -->
     <div class="start-btn-container">
+      <div class="start-btn-container-text">
 
-      <p>시작하려면 버튼을 누르세요</p>
+        <!-- <p>시작하려면 버튼을 누르세요</p> -->
+      </div>
       <button id="start-btn">시작하기</button>
     </div>
 
@@ -226,19 +257,20 @@ body {
       function startKiosk() {
         document.getElementById('landing').classList.add('hidden');
         document.getElementById('main').classList.remove('hidden');
-        // face detection 관련 코드 시작
+        /* // face detection 관련 코드 시작 */
         startFaceDetection();
         setStreamImage();
         }
     </script>
+  
+  <div id="main" class="content-container hidden main-content">
+
+    <p id="status"></p>
+    <div class="face-detection-container">
+      <h1>Face Detection Stream</h1>
+      <img id="faceStream" alt="Face Detection Stream" />
+    </div>
   </div>
 
-  <!-- 메인 페이지 -->
-  <div id="main" class="content-container hidden main-content">
-    <h1>Welcome</h1>
-    <p id="status">아이스크림 드세요~</p>
-    <h1>Face Detection Stream</h1>
-    <img id="faceStream" alt="Face Detection Stream" />
-  </div>
 </body>
 </html>

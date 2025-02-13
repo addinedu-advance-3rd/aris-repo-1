@@ -12,7 +12,7 @@ COPY package*.json ./
 
 # Step 4: 의존성 설치
 # 'npm install' 명령어로 의존성 설치
-# RUN npm install
+RUN npm install
 
 # Step 5: 애플리케이션 코드 복사
 # 애플리케이션의 소스 코드를 컨테이너의 /app 디렉토리로 복사합니다.

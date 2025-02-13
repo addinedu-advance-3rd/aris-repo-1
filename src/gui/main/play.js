@@ -155,13 +155,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 const timer = document.getElementById('timer');
-let countdown = 15;  // ✅ 원하는 초 단위 설정 (예: 5초) -> 15초로 변경
+let countdown = 30;  // ✅ 원하는 초 단위 설정 (예: 5초) -> 15초로 변경
 
 function updateTimer() {
   timer.textContent = `${countdown}초 후 돌아가기`;  // ✅ 텍스트 업데이트
   countdown--;
   //5초전
-  if(countdown == 5){
+  if(countdown == 30){
     speak("잠시 후 초기화면으로 돌아갑니다.")
   }
   if (countdown < 0) {

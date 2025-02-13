@@ -9,19 +9,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const horizontalSpacing = 150; // px
     const verticalSpacing = 100;   // px
     
-    let html = '';
-    for (let row = 0; row < rowCount; row++) {
-      for (let col = 0; col < itemsPerRow; col++) {
-        const left = col * horizontalSpacing;
-        const top = row * verticalSpacing;
-        const imageIndex = (col % 3) + 1; // 순차적으로 1, 2, 3번 이미지 사용
-        html += `
-          <div class="item" style="top: ${top - 500}px; left: ${left - 700}px;">
-            <img src="img_src/ice_img_${imageIndex}.png" alt="Ice Cream">
-          </div>
-        `;
-      }
-    }
+    // let html = '';
+    // for (let row = 0; row < rowCount; row++) {
+    //   for (let col = 0; col < itemsPerRow; col++) {
+    //     const left = col * horizontalSpacing;
+    //     const top = row * verticalSpacing;
+    //     const imageIndex = (col % 3) + 1; // 순차적으로 1, 2, 3번 이미지 사용
+    //     html += `
+    //       <div class="item" style="top: ${top - 500}px; left: ${left - 700}px;">
+    //         <img src="img_src/ice_img_${imageIndex}.png" alt="Ice Cream">
+    //       </div>
+    //     `;
+    //   }
+    // }
     bgContainer.innerHTML = html;
   });
 

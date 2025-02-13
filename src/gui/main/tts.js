@@ -1,5 +1,5 @@
 // TTS 실행 함수 (콜백 없음, 단순 음성 출력)
-function speak(text) {
+export function speak(text) {
     const synth = window.speechSynthesis;
     const utterance = new SpeechSynthesisUtterance(text);
 
@@ -10,3 +10,5 @@ function speak(text) {
 
     synth.speak(utterance);
 }
+
+window.speak = speak;

@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <title>Select Toppings</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+
 </head>
 <style>
   body {
@@ -40,7 +42,24 @@
     }
   }
 
-  /* 콘텐츠용 컨테이너 (랜딩, 메인 페이지) */
+  p {
+      font-size: 1.4em;
+      font-weight: 400;
+      color: #555;
+      margin-bottom: 15px;
+    }
+
+
+    /* <p id="nickname-display"></p> */
+
+  #nickname-display {
+    font-size: 2em;
+    font-weight: 800;
+    color: #fee;
+    margin-bottom: 15px;
+  }
+
+    /* 콘텐츠용 컨테이너 (랜딩, 메인 페이지) */
   .content-container {
     position: relative;
     display: flex;
@@ -87,14 +106,95 @@
     max-width: 100%;
     height: auto;
   }
+
+  /* 토핑 선택 폼 */
+  #topping-form {
+      display: grid;
+      grid-template-columns: repeat(1, 1fr);
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    #topping-form label {
+      font-size: 1.5em;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 10px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #topping-form label:hover {
+      background: rgba(255, 255, 255, 1);
+      transform: scale(1.05);
+    }
+
+    #topping-form label:selection {
+        background: rgba(255, 255, 255, 1);
+        color: #333;
+    }
+
+    /* 체크박스 숨기기 및 커스텀 스타일 */
+    #topping-form input[type="checkbox"] {
+      display: none;
+    }
+/* 선택된 상태 (체크박스가 선택되었을 때) */
+#topping-form input[type="checkbox"]:checked + label {
+  background: #ff6f61; /* 선택 시 배경색 변경 */
+  color: white;
+  font-weight: 600;
+  transform: scale(1.1); /* 약간 커지게 효과 */
+  box-shadow: 3px 3px 15px rgba(255, 50, 50, 0.3);
+}
+
+/* 선택한 요소 강조 효과 (애니메이션 추가) */
+#topping-form input[type="checkbox"]:checked + label {
+  animation: pulse 0.3s ease-in-out;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin-top: 100px;
+}
+#recommendation-display {
+  font-size: 1.4em;
+  font-weight: 500;
+  color: #ff3b2e;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 15px;
+  border-radius: 15px;
+  display: inline-block;
+  text-align: center;
+  margin-top: 15px;
+  box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.1);
+  line-height: 1.8;
+}
+
+/* 추천 정보 없을 때 (경고 메시지) */
+#recommendation-display:empty::before {
+  content: "❌ 추천 정보를 가져오지 못했습니다.";
+  color: #555;
+}
+
+
+
 </style>
 <body>
   <div class="bg-container"></div>
   <div class="content-container">
+    <div class="main-content">  
+      <h1>토핑을 골라주세요</h1>
 
-
-    
-    <h1>Select Your Toppings</h1>
+    </div>
     
     <!-- 닉네임 표시 -->
     <p id="nickname-display"></p>

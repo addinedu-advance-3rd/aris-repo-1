@@ -10,7 +10,7 @@ import threading
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 import requests
-
+# from tts import speak
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})  # This will automatically add the header "Access-Control-Allow-Origin: *" to every response
@@ -38,7 +38,7 @@ class A_Circle_Arm():
             self.end_check_point = False
             self.arm_ip = arm_ip
             self.app = app
-            self.ice_cream_taken = False
+            self.ice_cream_taken = "NOT TAKEN"
             self.arm = None
             self.connect_to_arm()
             self.ice_cream_event = threading.Event()
@@ -327,7 +327,7 @@ class A_Circle_Arm():
             if self.collision_detected:
                 print("[WARNING] Collision detected! Pausing motion")
                 self.arm.set_state(state=3)  # 3: Pause state (정지)
-                time.sleep(2)
+                time.sleep(0.5)
                 
             else:
                 #print("[INFO] Collision cleared. Resuming motion")
@@ -548,6 +548,16 @@ class A_Circle_Arm():
         response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
         return response
 
+
+    
+    def check_ice_cream_status(self):
+        try:
+            response = requests.get('http://control_service:8080/check_ice_cream_status', timeout=5)
+            if response.json().get('ice_cream_taken') == "TAKEN":
+                self.ice_cream_taken = "taken"
+                print("Ice cream received!", flush=True)
+        except Exception as e:
+            print(f"Error checking ice cream status: {e}", flush=True)
     
     def run(self, toppings):
 
@@ -723,6 +733,16 @@ class A_Circle_Arm():
         time.sleep(12)
         self.arm.set_cgpio_digital(3,0) 
         
+        print("end_check_point 플래그 여기 걸기 여기", flush=True)  
+        print("end_check_point 플래그 여기 걸기 여기", flush=True)  
+        print("end_check_point 플래그 여기 걸기 여기", flush=True)  
+        print("end_check_point 플래그 여기 걸기 여기", flush=True)  
+        print("end_check_point 플래그 여기 걸기 여기", flush=True)  
+        print("end_check_point 플래그 여기 걸기 UP", flush=True)  
+        print("end_check_point 플래그 여기 걸기 UP", flush=True)  
+        print("end_check_point 플래그 여기 걸기 UP", flush=True)  
+        print("end_check_point 플래그 여기 걸기 UP", flush=True)  
+        self.end_check_point = True
         
         self._move_one_path("under_press_to_person")  # 사람에게 전달
 
@@ -731,48 +751,50 @@ class A_Circle_Arm():
         ############# -> 나가기 대충 5초전 플래그 여기 걸기 여기
         ############# -> 나가기 대충 5초전 플래그 여기 걸기 여기
         ############# -> 나가기 대충 5초전 플래그 여기 걸기 여기
-        ############# -> 나가기 대충 5초전 플래그 여기 걸기 여기
-        self.end_check_point = True  
-        ############# -> 나가기 대충 5초전 플래그 여기 걸기 여기
-        ############# -> 나가기 대충 5초전 플래그 여기 걸기 여기
-        ############# -> 나가기 대충 5초전 플래그 여기 걸기 여기
-        ############# -> 나가기 대충 5초전 플래그 여기 걸기 여기
-        ############# -> 나가기 대충 5초전 플래그 여기 걸기 여기
-        ############# -> 나가기 대충 5초전 플래그 여기 걸기 여기
 
 
-        time.sleep(5)  # 잠시 대기
+        time.sleep(3)  # 잠시 대기
         self._move_one_path("just_give")  # 아이스크림 전달
         self._grap(False)  # 그랩 해제
+        print("그랩 해제 후 대기 시작", flush=True)
 
         start_time = time.time()
 
         while time.time() - start_time < 30:
             try:
-                response = requests.get('http://control_service:8080/check_ice_cream_status', timeout=5)
-                if response.json()['ice_cream_taken']:
-                    self.ice_cream_taken = True
+                response = requests.get('http://control_service:8080/check_ice_cream_status', timeout=0.5)
+                print("while 안에서 RESPONSE 체크 현재 상태", flush=True)
+                print(response.json()['ice_cream_taken'], flush=True)
+                print("while 안에서 self 체크 현재 상태", flush=True)
+                print(self.ice_cream_taken, flush=True)
+                
+                if response.json()['ice_cream_taken'] == "TAKEN":
+                    # self.ice_cream_taken = True
                     print("icecrema_recived true", flush=True)
                     break
+
+                
             except Exception as e:
                 print(f"Error checking ice cream status: {e}")
             time.sleep(0.5)
             print("waiting for ice cream taken....", flush=True)
             
-            if self.ice_cream_taken:   # 아이스크림을 가져갔다면 
-                time.sleep(2)
-                self._move_joint_angle("front_press_retrieve")  # 바로 프레스로 이동
-                self._move_one_path("to_press_retrieve")  # 프레스 안으로
-                
-                break
+        if self.ice_cream_taken == "TAKEN":   # 아이스크림을 가져갔다면 
+            time.sleep(2)
+            self._move_joint_angle("front_press_retrieve")  # 바로 프레스로 이동
+            self._move_one_path("to_press_retrieve")  # 프레스 안으로
+            # speak("아이스크림을 가져갔습니다.")
+                # break
             
-        else:      # 아이스크림을 안 가져갔다면
+        elif self.ice_cream_taken == "NOT TAKEN":      # 아이스크림을 안 가져갔다면
             print("아이스크림을 안 가져갔다면", flush=True)
             self._move_one_path("put_on_ice_1")  # 아이스크림 위치에 올리기
             self._move_one_path("after_ice_1")
             self._move_joint_angle("front_press_retrieve")  # 그 후 프레스로 이동
             self._move_one_path("to_press_retrieve")  # 프레스 안으로
-            
+
+        else : 
+            print ( "아이스크림 상태 체크 오류", flush=True)   
         
         self._grap(True)  # 다시 그랩
         print("아이스크림 버리는 위치로 이동", flush=True)
@@ -798,14 +820,18 @@ def ice_cream_taken_handler():
     arm = A_Circle_Arm.get_instance() # 싱글톤 인스턴스 가져오기
     data = request.get_json()
     print(data)
-    if data['status'] == "taken":
-        arm.ice_cream_taken = True
+    if data['status'] == "TAKEN":
+        arm.ice_cream_taken = "TAKEN"
+        print("data['status'] : ", data['status'])
         print("Ice cream taken status received")
         return jsonify({"message": "Ice cream taken status received"}), 200
-    else:
-        arm.ice_cream_taken = False
+    elif data['status'] == "NOT TAKEN":
+        # arm.ice_cream_taken = False
+        print("data['status'] : ", data['status'])
         print("Ice cream not taken status received")
         return jsonify({"message": "XXXXX Ice cream not taken status received"}), 200
+    else : 
+        return jsonify({"message": "handler returns NONE"}), 200
 @app.route('/check_ice_cream_status', methods=['GET'])
 def check_ice_cream_status():
     arm = A_Circle_Arm.get_instance() # 싱글톤 인스턴스 가져오기
