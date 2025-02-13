@@ -60,6 +60,9 @@ class A_Circle_Arm():
             print("[INFO] Camera initialized for collision detection.")
             self.initialized = True
 
+            self.collision_thread = threading.Thread(target=self.detect_collision, daemon=True)
+            self.collision_handler_thread = threading.Thread(target=self.check_collision_and_pause, daemon=True)
+            
 
             if self.arm:
                 try:
@@ -291,11 +294,7 @@ class A_Circle_Arm():
                                 # cv2.waitKey(1)
                                 print("[INFO] 실링 감지 완료.")
                                 # 충돌 감지 관련 멀티스레드
-                                collision_thread = threading.Thread(target=self.detect_collision, daemon=True)
-                                collision_thread.start()
-
-                                collision_handler_thread = threading.Thread(target=self.check_collision_and_pause, daemon=True)
-                                collision_handler_thread.start()
+                                
                                 return self.position  # 1, 2, 3 중 하나 반환
                                 
             # 'q' 키를 누르면 종료
@@ -326,7 +325,7 @@ class A_Circle_Arm():
                 time.sleep(2)
                 
             else:
-                print("[INFO] Collision cleared. Resuming motion")
+                #print("[INFO] Collision cleared. Resuming motion")
                 self.arm.set_state(state=0)  # 0: Resume motion (재개)
 
             time.sleep(0.1)
@@ -405,9 +404,12 @@ class A_Circle_Arm():
                 # # 'q' 키를 누르면 종료
                 # if cv2.waitKey(1) & 0xFF == ord('q'):
                 #     break      
+    def threading_start(self):
+        print("[INFO] Threading Start!")
+        self.collision_thread.start()
+        self.collision_handler_thread.start()
 
-
-
+        
     def set_collision_status(self, status): # 현재 사용 x
         self.collision_detected = status
         if status:
@@ -426,10 +428,10 @@ class A_Circle_Arm():
     def _grap(self, gripper=True):
         if gripper:
             self.arm.close_lite6_gripper() 
-            time.sleep(0.1)
+            time.sleep(1)
         else:
             self.arm.open_lite6_gripper()
-            time.sleep(0.1)
+            time.sleep(1)
             self.arm.stop_lite6_gripper()
 
     def _move_one_path(self, act, pitch_maintain=True):
@@ -546,6 +548,7 @@ class A_Circle_Arm():
         print(f"[INFO] 최종 반환된 위치 번호: {detected_position}")
 
         time.sleep(2)
+        self.threading_start()
 
         # 토핑 선택과 관련된 초기 설정
         self._init_6th_motor()  # 6번째 모터 초기화
@@ -580,7 +583,7 @@ class A_Circle_Arm():
         self._move_one_path("cup_to_up_cup")  # 컵 위로 이동
         self._turn_cup(180)  # 컵 회전
         self._grap(False)  # 그랩 해제
-        time.sleep(1)  # 1초 대기
+
         self._move_one_path("up_cup_to_topping_zone")
 
         # 선택된 토핑에 따라 동작 수행
@@ -709,7 +712,7 @@ class A_Circle_Arm():
             try:
                 response = requests.get('http://control_service:8080/check_ice_cream_status', timeout=5)
                 if response.json()['ice_cream_taken']:
-                    self.ice_cream_taken = Trume
+                    self.ice_cream_taken = True
                     break
             except Exception as e:
                 print(f"Error checking ice cream status: {e}")
@@ -768,23 +771,14 @@ def check_ice_cream_status():
 def check_end_status():
     try:
         arm = A_Circle_Arm.get_instance()  # 싱글톤 인스턴스 가져오기
-        return jsonify({"status": "end_ice"}), 200 # 테스트
-        '''
-        if arm is None:
-            print("❌ A_Circle_Arm 인스턴스가 None입니다.", flush=True)
-            return jsonify({"error": "A_Circle_Arm instance is None"}), 500
-
-        if not hasattr(arm, "end_check_point"):
-            print("❌ end_check_point 속성이 없습니다.", flush=True)
-            return jsonify({"error": "end_check_point attribute not found"}), 500
-        
-        print(f"✅ end_check_point 상태: {arm.end_check_point}", flush=True)
-        return jsonify({"status": "end_ice" if arm.end_check_point else "processing"}), 200
-        '''
-
+        if arm.end_check_point:
+            return jsonify({"status": "end_ice"}), 200
+        else:
+            return jsonify({"status": "processing"}), 200
     except Exception as e:
         print(f"🔥 /check_end_status 오류 발생: {e}", flush=True)
         return jsonify({"error": str(e)}), 500
+       
 
 if __name__ == "__main__":
     # Run Flask server

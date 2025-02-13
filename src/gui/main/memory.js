@@ -49,8 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Error checking manufacturing status:", error);
       });
     }
-    // 상태를 3초마다 주기적으로 체크
-  const statusCheckInterval = setInterval(checkEndStatus, 3000);
+    // 상태를 1초마다 주기적으로 체크
+  const statusCheckInterval = setInterval(checkEndStatus, 1000);
 });
 
 

@@ -227,7 +227,7 @@ def stream_video():
 
     
     # global cap
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     # initial_detected = False
     # event_time = None
     break_count = 0
