@@ -189,7 +189,7 @@ class A_Circle_Arm():
                        "in_press_to_front_press": [3, 24, 4],
                        "up_cup_to_cup": [8, 6],
                        "cup_to_up_cup" : [6, 8],
-                       "up_cup_to_topping_zone": [9, 10, 19],  #없애고, joint control로 대체?
+                       "up_cup_to_topping_zone": [10, 19],  #없애고, joint control로 대체?
                        "topping_1": [19, 11],
                        "after_topping_1": [19],
                        "topping_2": [20, 12],
@@ -201,10 +201,13 @@ class A_Circle_Arm():
                        "put_on_ice_1": [16, 41, 32, 33],
                        "put_on_ice_2": [16, 41, 35, 36],
                        "put_on_ice_3": [16, 41, 38, 39],
+                       "after_ice_1": [33, 34, 41],
+                       "after_ice_2": [36, 37, 41],
+                       "after_ice_3": [39, 40, 41],
                        "ice_1_to_in_press_retrieve": [33, 34, 41, 43, 44, 45],
                        "ice_2_to_in_press_retrieve": [36, 37, 41, 43, 44, 45],
                        "ice_3_to_in_press_retrieve": [39, 40, 41, 43, 44, 45],
-                       "person_to_press_retrieve": [16, 43, 44, 45],
+                       "to_press_retrieve": [45],
                        "press_to_waste": [45, 31, 30, 29],
                        "return_to_default": [29, 30, 44, 43, 46, 47, 17], 
                        "return_to_default_direct": [46, 47, 17],
@@ -216,7 +219,8 @@ class A_Circle_Arm():
         """
         self.angles = {"ice_to_front_press": [-9.3, -0.3, 81.8, -92.1, -97.8, 80.8],  # 각 angle 값 대입
                         "front_press_to_up_cup": [-10.5, 14.1, 35.2, 81.9, -86.9, -20.9],
-                        "up_cup_to topping_zone":[-165, 8.5, 48.8, 86.3, -82.3, 142.5],
+                        "up_cup_to_topping_zone":[-159.4, -6.3, 35.6, 70.5, -73.3, 141],
+                        "front_press_retrieve":[-13.2, -1.9, 70.2, -94, -102.3, 251.7]
                         }
     @staticmethod
     def get_instance():
@@ -565,8 +569,10 @@ class A_Circle_Arm():
         print(f"[INFO] 최종 반환된 위치 번호: {detected_position}")
 
         time.sleep(2)
+        
 
         self.threading_start()
+
 
 
 
@@ -596,14 +602,15 @@ class A_Circle_Arm():
         self._move_joint_angle("ice_to_front_press")
         self._move_one_path("front_press_to_in_press")  # 아이스크림 프레스 이동
         self._grap(False)  # 그랩 해제
-        self._move_one_path("in_press_to_front_press")  # 프레스로 이동
+        self._move_one_path("in_press_to_front_press")  # 컵으로 이동
         self._move_joint_angle("front_press_to_up_cup")
         self._move_one_path("up_cup_to_cup")  # 컵 위로 이동 
         self._grap(True)  # 컵 그랩
         self._move_one_path("cup_to_up_cup")  # 컵 위로 이동
         self._turn_cup(180)  # 컵 회전
         self._grap(False)  # 그랩 해제
-
+        
+        self._move_joint_angle("up_cup_to_topping_zone")
         self._move_one_path("up_cup_to_topping_zone")
 
         # 선택된 토핑에 따라 동작 수행
@@ -736,7 +743,7 @@ class A_Circle_Arm():
 
         time.sleep(5)  # 잠시 대기
         self._move_one_path("just_give")  # 아이스크림 전달
-        
+        self._grap(False)  # 그랩 해제
 
         start_time = time.time()
 
@@ -745,38 +752,43 @@ class A_Circle_Arm():
                 response = requests.get('http://control_service:8080/check_ice_cream_status', timeout=5)
                 if response.json()['ice_cream_taken']:
                     self.ice_cream_taken = True
+                    print("icecrema_recived true", flush=True)
                     break
             except Exception as e:
                 print(f"Error checking ice cream status: {e}")
             time.sleep(0.5)
             print("waiting for ice cream taken....", flush=True)
             
-            if self.ice_cream_taken:   # 아이스크림을 가져갔다면 ====> 여기서 '아이스크림을 사람이 가져갔다' 라는 정보가 입력되어야 하는데, 어떤 식으로 구현해야 할지 모르겠습니다..
-                #self._move_one_path("person_to_press_retrieve") # 바로 프레스로 이동
-                self._grap(False)  # 그랩 해제
+            if self.ice_cream_taken:   # 아이스크림을 가져갔다면 
+                time.sleep(2)
+                self._move_joint_angle("front_press_retrieve")  # 바로 프레스로 이동
+                self._move_one_path("to_press_retrieve")  # 프레스 안으로
+                
                 break
             
         else:      # 아이스크림을 안 가져갔다면
             print("아이스크림을 안 가져갔다면", flush=True)
-            #self._move_one_path("put_on_ice_1")  # 아이스크림 위치에 올리기
-            #self._move_one_path("ice_1_to_in_press_retrieve")  # 그 후 프레스로 이동
-            self._grap(False)  # 그랩 해제
+            self._move_one_path("put_on_ice_1")  # 아이스크림 위치에 올리기
+            self._move_one_path("after_ice_1")
+            self._move_joint_angle("front_press_retrieve")  # 그 후 프레스로 이동
+            self._move_one_path("to_press_retrieve")  # 프레스 안으로
+            
         
         self._grap(True)  # 다시 그랩
         print("아이스크림 버리는 위치로 이동", flush=True)
-        #self._move_one_path("press_to_waste")  # 아이스크림 버리는 위치로
+        self._move_one_path("press_to_waste")  # 아이스크림 버리는 위치로
         self._turn_cup(-180)  # 컵 회전
         self._grap(False)  # 그랩 해제
         """time.sleep(3)  # 3초 대기"""
         self._return_to_default() # 기본 위치로 돌아가기
 
         """self._move_one_path("return_to_default")"""
-        """self.arm.set_cgpio_analog(0, 5)
+        self.arm.set_cgpio_analog(0, 5)
         time.sleep(3)
         self.arm.set_cgpio_analog(1, 5)
         time.sleep(3)
         self.arm.set_cgpio_analog(0, 0)
-        time.sleep(3)"""
+        time.sleep(3)
 
 
 my_arm = A_Circle_Arm("192.168.1.182", app)
