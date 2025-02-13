@@ -1,5 +1,5 @@
 import { NGROK_BASE_URL } from './config.js';
-
+import { speak } from './tts.js';
 
 document.addEventListener('DOMContentLoaded', function() {
   const bgContainer = document.querySelector('.bg-container');
@@ -26,6 +26,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+      //TTS
+      speak("영상이 재생됩니다.")
+
       // 최신 영상 가져오기
       const response = await fetch(`${NGROK_BASE_URL}/gui/latest-video`);
       if (!response.ok) {
@@ -145,19 +148,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   //  time out to redirect 10 se
 
-setTimeout(() => {
-  window.location.href = '/gui/';
-  console.log('Redirecting to /gui/ in 10 seconds...');
-}, 10000);
+// setTimeout(() => {
+//   window.location.href = '/gui/';
+//   console.log('Redirecting to /gui/ in 10 seconds...');
+// }, 10000);
 
 
 const timer = document.getElementById('timer');
-let countdown = 5;  // ✅ 원하는 초 단위 설정 (예: 5초)
+let countdown = 15;  // ✅ 원하는 초 단위 설정 (예: 5초) -> 15초로 변경
 
 function updateTimer() {
   timer.textContent = `${countdown}초 후 돌아가기`;  // ✅ 텍스트 업데이트
   countdown--;
-
+  //5초전
+  if(countdown == 5){
+    speak("잠시 후 초기화면으로 돌아갑니다.")
+  }
   if (countdown < 0) {
     clearInterval(timerInterval);  // ✅ 타이머 종료
     window.location.href = "/gui/";  // ✅ 0초가 되면 페이지 이동

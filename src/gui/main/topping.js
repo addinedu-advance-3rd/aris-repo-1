@@ -1,5 +1,5 @@
 import { NGROK_BASE_URL } from './config.js';
-
+import { speak } from './tts.js';
 
 document.addEventListener('DOMContentLoaded', function() {
     const bgContainer = document.querySelector('.bg-container');
@@ -33,11 +33,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const nickname = localStorage.getItem('customerNickname');
     if (nickname) {
       nicknameDisplay.textContent = `@${nickname} 님 반가워요!`;
+      speak(`@${nickname} 님, 반가워요! 토핑을 선택해주세요.`);
     } else {
       nicknameDisplay.textContent = '고객님 반가워요!';
+      speak(`토핑을 선택해주세요.`);
     }
 
-    // (추가 기능) 토핑 추천 하기
+    // (추가 기능) 토핑 추천 하기 나이, 성별 가져오기
     const age = localStorage.getItem('customerAge')
     const gender = localStorage.getItem('customerGender')
     const recommendationDisplay = document.getElementById('recommendation-display');
@@ -51,14 +53,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 토핑 추천 로직
     function getRecommendedToppings(age, gender) {
-      if (age < 18) {
-          return gender === 'male' ? ['조리퐁', '해바라기씨'] : ['초코볼', '해바라기씨'];
-      } else if (age < 30) {
-          return ['조리퐁', '초코볼'];
+      const allToppings = ["조리퐁", "해바라기씨", "코코볼"]; // 전체 토핑 리스트
+      let recommendedToppings = [];
+  
+      // 💡 연령대 & 성별에 따른 기본 추천 (1개 이상)
+      if (age <= 19) {
+          recommendedToppings.push(gender === "male" ? "조리퐁" : "코코볼");
+      } else if (age <= 29) {
+          recommendedToppings.push("조리퐁");
+          recommendedToppings.push(gender === "male" ? "코코볼" : "해바라기씨");
+      } else if (age <= 39) {
+          recommendedToppings.push("코코볼", "해바라기씨"); // 30대부터 해바라기씨 추천 증가
       } else {
-          return ['해바라기씨'];
+          recommendedToppings.push("해바라기씨"); // 40대 이상이면 해바라기씨 기본 추천
       }
-    }
+  
+      // ✅ 무작위로 추천 개수 결정 (1~3개)
+      const targetToppingCount = Math.floor(Math.random() * 3) + 1; // 1~3개 중 랜덤 선택
+  
+      // ✅ 부족하면 랜덤 추가 (이미 추천된 항목 제외)
+      while (recommendedToppings.length < targetToppingCount) {
+          let randomTopping = allToppings[Math.floor(Math.random() * allToppings.length)];
+          if (!recommendedToppings.includes(randomTopping)) { // 중복 방지
+              recommendedToppings.push(randomTopping);
+          }
+      }
+  
+      return recommendedToppings;
+  }
     
     // (2) 폼 제출 시 이벤트 핸들러
     form.addEventListener('submit', async (event) => {

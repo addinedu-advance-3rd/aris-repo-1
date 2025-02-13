@@ -8,13 +8,16 @@ const status = document.getElementById('status');
 let DEFAULT_DEVICE_ID = 'sdf';
 const FALLBACK_DEVICE_ID = '3a44ff7781f8098b3d253d6d6660407fa39dface2eeb2b6f778e01d86140147d';
 import { NGROK_BASE_URL } from './config.js';
-
+import { speak } from './tts.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // 페이지 요소 가져오기
   //const testButton = document.getElementById('test-button');
   const cookingPage = document.getElementById('cooking');
   const mainPage = document.getElementById('main-page');
+
+  // ✅ TTS: 아이스크림 제조 중 안내
+  speak("아이스크림을 제조 중입니다. 잠시만 기다려 주세요.");
 
   // 상태 체크 함수
   function checkEndStatus() {
@@ -24,6 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("📡 Manufacturing status:", data);
 
         if (data.status === "end_ice") {
+          // ✅ TTS: 제조 완료 후 안내
+          speak("제조가 완료되었습니다! 아이스크림 수령 촬영을 위한 녹화가 진행됩니다.");
+
           // 제조 완료 상태일 때 페이지 전환
           //페이지 전환 후 캠 띄우기
           setTimeout(() => {
@@ -49,8 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Error checking manufacturing status:", error);
       });
     }
-    // 상태를 3초마다 주기적으로 체크
-  const statusCheckInterval = setInterval(checkEndStatus, 3000);
+    // 상태를 1초마다 주기적으로 체크
+  const statusCheckInterval = setInterval(checkEndStatus, 1000);
 });
 
 
