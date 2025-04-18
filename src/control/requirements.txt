@@ -1,0 +1,13 @@
+xarm-python-sdk
+flask
+flask-cors  # If using CORS
+opencv-python
+
+torch==1.13.1
+pandas==2.1.4
+# numpy==2.0.3
+ultralytics
+mediapipe
+
+requests==2.32.3
+pillow

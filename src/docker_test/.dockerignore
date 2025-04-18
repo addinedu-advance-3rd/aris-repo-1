@@ -1,0 +1,14 @@
+# 빌드에 포함되지 않아야 할 파일을 여기에 나열
+.git
+node_modules
+*.log
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.log
+*.log.*
+*.log.*.*
+*.log.*.*.*
+*.log.*.*.*.*
+*.log.*.*.*.*.*

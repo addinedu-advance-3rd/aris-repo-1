@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Webcam Video Recorder</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Fredoka One', sans-serif;
+      background: linear-gradient(135deg, #ffdde1, #ee9ca7);
+      color: #333;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* 랜딩 페이지 (아이스크림 제조 중) */
+    /* .cooking-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    } */
+
+    h1 {
+      font-size: 3em;
+      color: #fff;
+      text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    p {
+      font-size: 1.8em;
+      color: #fff;
+    }
+
+    /* 아이스크림 메인 애니메이션 */
+    /* .big-ice-cream {
+      width: 150px;
+      height: 200px;
+      /* background: url('https://i.imgur.com/ldR8s6X.png') no-repeat center/contain; */
+      /*animation: shake 0.4s infinite alternate ease-in-out, rotateIce 2s infinite linear;
+    /* } */ 
+
+    #image-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 200px;
+    }
+
+    /* 흔들리는 효과 */
+    @keyframes shake {
+      0% { transform: rotate(-5deg) translateY(0px); }
+      100% { transform: rotate(5deg) translateY(-5px); }
+    }
+
+    /* 회전 효과 */
+    @keyframes rotateIce {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 배경 작은 아이스크림 */
+    /* .small-ice-cream {
+      position: absolute;
+      width: 50px;
+      height: 70px;
+      background: url('https://i.imgur.com/ldR8s6X.png') no-repeat center/contain;
+      opacity: 0.8;
+      animation: float 3s infinite ease-in-out alternate;
+    } */
+
+    /* 랜덤한 위치에서 떠다니는 애니메이션 */
+    .small-ice-cream:nth-child(1) { top: 10%; left: 20%; animation-duration: 2.5s; }
+    .small-ice-cream:nth-child(2) { top: 30%; right: 10%; animation-duration: 3s; }
+    .small-ice-cream:nth-child(3) { bottom: 20%; left: 40%; animation-duration: 2s; }
+    .small-ice-cream:nth-child(4) { bottom: 30%; right: 20%; animation-duration: 2.8s; }
+
+    /* 부드럽게 떠다니는 효과 */
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      100% { transform: translateY(-15px); }
+    }
+
+    /* 메인 페이지 */
+    .content-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .show-main {
+      display: flex !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 배경에 작은 아이스크림 추가 -->
+  <div class="small-ice-cream"></div>
+  <div class="small-ice-cream"></div>
+  <div class="small-ice-cream"></div>
+  <div class="small-ice-cream"></div>
+
+  <!-- 랜딩 페이지 -->
+  <div id="cooking" class="cooking-container">
+    <div class="big-ice-cream"></div>
+    <h1>🍦 아이스크림 제조 중! 🍦</h1>
+    <p>잠시만 기다려 주세요...</p>
+  </div>
+
+  <!-- 메인 페이지 -->
+  <div id="main-page" class="content-container hidden">
+    <h1>Webcam Video Recorder</h1>
+    <img id="cup_detect_stream" alt="cup_detect_stream" alt = "cup_detect_stream" />
+    <div id="image-container"></div>
+
+    <p id="status"></p>
+  </div>
+
+  <script type="module" src="memory.js"></script>
+</body>
+</html>

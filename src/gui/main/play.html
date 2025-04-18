@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Play Captured Video</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+      color: #333;
+    }
+  
+    /* 배경 아이스크림 애니메이션 컨테이너 */
+    .bg-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: -1; /* 다른 콘텐츠 뒤에 위치 */
+      background: transparent;
+    }
+    .item {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      /* background: #4169e1; */
+      animation: diagonal-move-anim 10s linear infinite alternate;
+    }
+    @keyframes diagonal-move-anim {
+      0% {
+        transform: translate(0, 0);
+      }
+      100% {
+        transform: translate(150px, 150px);
+      }
+    }
+  
+    /* 콘텐츠용 컨테이너 (랜딩, 메인 페이지) */
+    .content-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .hidden {
+      display: none;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 1.2em;
+      background-color: #ff6f61;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-top: 20px;
+    }
+    button:hover {
+      background-color: #ff3b2e;
+    }
+    .main-content {
+      animation: fadeIn 1s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+    p {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+    /* 비디오 기본 크기 */
+    video {
+      width: 640px;
+      height: 480px;
+    }
+
+    .qr-code {
+      padding-top: 2em;
+    }
+
+    /* -------------------------- */
+    /*   반응형 미디어 쿼리 추가   */
+    /* -------------------------- */
+
+    /* 태블릿 이하 (예: 768px 이하) */
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2em;
+      }
+      p {
+        font-size: 1.2em;
+      }
+      button {
+        font-size: 1em;
+        padding: 10px 20px;
+      }
+      video {
+        width: 80%;  /* 줄어든 폭에서 약간 여백을 두고 표시 */
+        height: auto; 
+        max-width: 640px; /* 너무 커지지 않도록 제한 */
+      }
+    }
+
+    /* 모바일 (예: 480px 이하) */
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.8em;
+      }
+      p {
+        font-size: 1.1em;
+      }
+      button {
+        font-size: 0.9em;
+        padding: 10px 15px;
+      }
+      video {
+        width: 100%; 
+        height: auto;
+        max-width: 640px;
+      }
+    }
+  </style>
+
+</head>
+<body>
+  <div class="bg-container"></div>
+
+  <div class="content-container">
+    <h1>Play Captured Video</h1>
+    
+    <!-- 비디오 -->
+    <video id="captured-video" controls autoplay></video>
+
+    <!-- start-playback -->
+    <button id="start-playback">Start Playback</button>
+    <!-- QR 코드 -->
+    <div id="qr-code"></div>
+    
+    <!-- 힌트 메시지 -->
+    <p id="hint"></p>
+    
+    <!-- 공유 버튼 -->
+    <button id="share-button">Share Video</button>
+    
+    <!-- 돌아가기 버튼 -->
+    <button id="back">돌아가기</button>
+
+    <!-- 타이머 -->
+    <div id="timer">
+      <!-- <p>10초 후 돌아가기</p> -->
+    </div>
+  </div>  
+
+  <script type="module" src="play.js"></script>
+</body>
+</html>

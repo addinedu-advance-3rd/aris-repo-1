@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  nginx-proxy:
+    image: nginx:latest
+    container_name: nginx-proxy
+    ports:
+      - "80:80"         # 호스트의 80 -> 컨테이너의 80
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - face_detect
+      - control
+      - gui
+      - db
+      - cup_detect
+    networks:
+      - mynet
+
+  control:
+    build:
+      context: ./src/control
+      dockerfile: Dockerfile
+    container_name: control_service
+    environment:
+      - ENV_VAR_NAME=value  # 필요한 환경 변수 추가 (예시)
+    expose:
+      - "8080"
+    devices:
+      - "/dev/video2:/dev/video0"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
+      # - "/dev/video1:/dev/video0"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
+    restart : always
+    volumes:
+      - ./src/control:/app  # 로컬 파일과 컨테이너 파일 매핑
+      - shared_folder:/app/shared_folder
+    networks:
+        - mynet
+      
+
+  face_detect:
+    build:
+      context: ./src/face_detect
+      dockerfile: Dockerfile
+    container_name: face_detect_service
+    restart : always
+    runtime: nvidia  # GPU 사용
+    # privileged: true  # 컨테이너가 호스트 
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0  # GPU 0 사용 (첫 번째 GPU)
+    devices:
+     - "/dev/video0:/dev/video0"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
+    volumes:
+      - ./src/face_detect:/app  # 로컬 파일과 컨테이너 파일 매핑
+    expose:
+      - "5000"
+    networks:
+        - mynet
+
+
+  gui:
+    build:
+      context: ./src/gui
+      dockerfile: Dockerfile
+    container_name: gui_service
+    volumes:
+      - ./src/gui:/app  # 로컬 파일과 컨테이너 파일 매핑
+      - shared_video:/app/main/video_src
+    environment:
+      - ENV_VAR_NAME=value  # 필요한 환경 변수 추가 (예시)
+    depends_on:
+      - face_detect  # face_detect 서비스 의존성 추가
+    expose:
+      - "3001"
+    networks:
+        - mynet
+  
+  db:
+    build:
+      context: ./src/db
+      dockerfile: Dockerfile
+    container_name: db_service
+    volumes:
+      - ./src/db:/app  # 로컬 파일과 컨테이너 파일 매핑
+    environment:
+      - FLASK_ENV=development
+    expose:
+      - "8000"
+    networks:
+        - mynet
+    
+  cup_detect:
+    build:
+      context: ./src/cup_detect
+      dockerfile: Dockerfile
+    container_name: cup_detect_service
+    volumes:
+      - ./src/cup_detect:/app  # 로컬 파일과 컨테이너 파일 매핑
+      - shared_video:/app/video_src
+      - shared_folder:/app/shared_folder
+    runtime: nvidia  # GPU 사용 (그래픽카드 없는 경우 대응 위해 주석 처리)
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0  # GPU 0 사용 (첫 번째 GPU)
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    expose:
+      - "6000"
+    devices:
+      - "/dev/video4:/dev/video1"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
+    networks:
+        - mynet
+    restart: always
+
+    # devices:
+      # - "/dev/video2:/dev/video2"  # 웹캠 장치 매핑 (카메라 없는 경우 대응 위해 주석 처리)
+
+volumes:
+  shared_video: 
+    name : shared_video
+  shared_folder:
+    name : shared_folder
+
+networks:
+  mynet : 
+    driver: bridge

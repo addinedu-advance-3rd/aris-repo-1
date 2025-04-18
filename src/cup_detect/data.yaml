@@ -1,0 +1,6 @@
+train: /home/addinedu/venv/objectdetection/custom_data/train/images
+val: /home/addinedu/venv/objectdetection/custom_data/valid/images
+
+nc: 1  # 클래스 수 (여기선 'cup'만 있음)
+names: ['cup']  # 클래스 이름
+
